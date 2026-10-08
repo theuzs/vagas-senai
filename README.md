@@ -15,7 +15,7 @@ Documentos: [problema](docs/PROBLEMA.md), [especificação](docs/ESPECIFICACAO.m
 Precisa de Node 22.
 
 ```
-npm install --legacy-peer-deps
+npm install
 npm run dev
 ```
 
