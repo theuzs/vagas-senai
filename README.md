@@ -19,7 +19,7 @@ npm install
 npm run dev
 ```
 
-Abra http://localhost:3000/?demo=1 para ver a página com dados simulados (a faixa amarela avisa que é demonstração). Sem `?demo=1` a página lê o Supabase das variáveis de ambiente; copie `.env.example` para `.env.local` e preencha `NEXT_PUBLIC_SUPABASE_URL` e `NEXT_PUBLIC_SUPABASE_ANON_KEY`.
+Abra http://localhost:3000/?demo=1 para ver a página com dados simulados (a faixa amarela avisa que é demonstração) e http://localhost:3000/guarita?demo=1 para a tela do PC da guarita. Sem `?demo=1` a página lê o Supabase das variáveis de ambiente; copie `.env.example` para `.env.local` e preencha `NEXT_PUBLIC_SUPABASE_URL` e `NEXT_PUBLIC_SUPABASE_ANON_KEY`.
 
 Testes:
 

@@ -63,7 +63,20 @@ npm run token:gerar -- bolsao-h "Bolsão H"
 4. `npm run simular:ponte -- --parar H`: só o H fica em SEM DADOS.
 5. Com o ESP32 do bolsão gravado e no Wi-Fi do campus, o monitor serial mostra `[http] ok` a cada 10 s e a página passa a seguir os sensores.
 
-## 7. QR code na guarita
+## 7. PC da guarita
+
+A tela do vigia fica em `https://vagas.rubysistemas.com.br/guarita`.
+
+1. No PC da guarita, crie um atalho do Chrome com o destino:
+   ```
+   "C:\Program Files\Google\Chrome\Application\chrome.exe" --kiosk --noerrdialogs --disable-session-crashed-bubble https://vagas.rubysistemas.com.br/guarita
+   ```
+   O `--kiosk` abre em tela cheia, sem barra de endereço. Para sair, `Alt+F4`.
+2. Para abrir sozinha ao ligar o PC: `Win+R`, digite `shell:startup` e copie o atalho para essa pasta.
+3. Em Configurações → Sistema → Energia, ponha "Desligar a tela" e "Suspender" em **Nunca**. A página também pede ao navegador para não apagar a tela, mas a configuração do Windows manda.
+4. Sem o modo quiosque, a página mostra um botão "Abrir em tela cheia".
+
+## 8. QR code na guarita
 
 Abra `https://vagas.rubysistemas.com.br/qr` e imprima (a página já vem em A4). Cole na guarita e, se quiser, nas entradas dos bolsões.
 

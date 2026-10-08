@@ -10,26 +10,11 @@ const ESTILO: Record<Situacao, { borda: string; fundo: string; texto: string }> 
   "sem-dados": { borda: "border-sem-dados border-dashed", fundo: "bg-[var(--sem-dados-fundo)] listrado", texto: "text-sem-dados" },
 };
 
-export function CartaoBolsao({ bolsao, situacao, grande = false }: { bolsao: Bolsao; situacao: Situacao; grande?: boolean }) {
+export function CartaoBolsao({ bolsao, situacao }: { bolsao: Bolsao; situacao: Situacao }) {
   const e = ESTILO[situacao];
-  // Modo painel (TV na guarita): tudo maior.
-  const t = grande
-    ? { letra: "text-6xl", numero: "text-[clamp(4rem,14vw,9rem)]", rotulo: "text-xl", estado: "text-2xl", icone: "h-10 w-10", altura: "min-h-[60vh]" }
-    : { letra: "text-3xl", numero: "text-4xl", rotulo: "text-xs", estado: "text-xs", icone: "h-5 w-5", altura: "min-h-[7.5rem]" };
   const livres = situacao === "sem-dados" ? null : bolsao.vagas_livres;
 
-  // Pulsa quando o número muda (quem pediu menos movimento não vê, pelo CSS).
-  const anterior = useRef(livres);
-  const [pulsando, setPulsando] = useState(false);
-  useEffect(() => {
-    if (anterior.current !== livres && livres !== null) {
-      setPulsando(true);
-      const t = setTimeout(() => setPulsando(false), 450);
-      anterior.current = livres;
-      return () => clearTimeout(t);
-    }
-    anterior.current = livres;
-  }, [livres]);
+  const pulsando = usePulso(livres);
 
   const rotulo =
     situacao === "sem-dados"
@@ -44,28 +29,44 @@ export function CartaoBolsao({ bolsao, situacao, grande = false }: { bolsao: Bol
       data-testid={`cartao-${bolsao.id}`}
       data-situacao={situacao}
       aria-label={rotulo}
-      className={`flex ${t.altura} min-w-0 flex-1 flex-col items-center justify-between rounded-2xl border-2 px-1 py-3 text-center no-underline ${e.borda} ${e.fundo}`}
+      className={`flex min-h-[7.5rem] min-w-0 flex-1 flex-col items-center justify-between rounded-2xl border-2 px-1 py-3 text-center no-underline ${e.borda} ${e.fundo}`}
     >
-      <span className={`${grande ? "text-xl" : "text-sm"} font-semibold uppercase tracking-wide text-texto-secundario`}>Bloco</span>
-      <span className={`${t.letra} font-black leading-none text-texto`}>{bolsao.id}</span>
+      <span className="text-sm font-semibold uppercase tracking-wide text-texto-secundario">Bloco</span>
+      <span className="text-3xl font-black leading-none text-texto">{bolsao.id}</span>
       {situacao === "sem-dados" ? (
-        <span className={`flex flex-col items-center gap-1 ${t.estado} font-bold leading-tight ${e.texto}`}>
-          <IconeAlerta className={t.icone} />
+        <span className={`flex flex-col items-center gap-1 text-xs font-bold leading-tight ${e.texto}`}>
+          <IconeAlerta />
           SEM DADOS
         </span>
       ) : situacao === "lotado" ? (
-        <span className={`flex flex-col items-center gap-1 ${grande ? "text-[clamp(1rem,5.5vw,2.5rem)]" : "text-sm"} font-black leading-tight ${e.texto}`}>
-          <span className={`${grande ? "text-[clamp(4rem,14vw,9rem)]" : "text-2xl"} leading-none`}>0</span>
+        <span className={`flex flex-col items-center gap-1 text-sm font-black leading-tight ${e.texto}`}>
+          <span className="text-2xl leading-none">0</span>
           LOTADO
         </span>
       ) : (
         <span className={`flex flex-col items-center leading-tight ${e.texto}`}>
-          <span className={`${t.numero} font-black leading-none ${pulsando ? "pulso" : ""}`}>{livres}</span>
-          <span className={`${t.rotulo} font-semibold`}>{livres === 1 ? "livre" : "livres"}</span>
+          <span className={`text-4xl font-black leading-none ${pulsando ? "pulso" : ""}`}>{livres}</span>
+          <span className="text-xs font-semibold">{livres === 1 ? "livre" : "livres"}</span>
         </span>
       )}
     </a>
   );
+}
+
+/** true por ~450 ms quando o número muda (o CSS desliga para quem pediu menos movimento). */
+export function usePulso(valor: number | null): boolean {
+  const anterior = useRef(valor);
+  const [pulsando, setPulsando] = useState(false);
+  useEffect(() => {
+    if (anterior.current !== valor && valor !== null) {
+      setPulsando(true);
+      const t = setTimeout(() => setPulsando(false), 450);
+      anterior.current = valor;
+      return () => clearTimeout(t);
+    }
+    anterior.current = valor;
+  }, [valor]);
+  return pulsando;
 }
 
 export function IconeAlerta({ className = "h-5 w-5" }: { className?: string }) {

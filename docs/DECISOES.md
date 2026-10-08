@@ -52,3 +52,4 @@ Para o Matheus:
 O Matheus confirmou as 29 e acrescentou:
 
 30. **Um ESP32 por bolsão fala direto com o Supabase, em um arquivo só.** O código real dos nós (`bolsao.ino` original do João) lê os sensores e serve uma página no softAP; não há ESP-NOW nem central. Então a decisão 3 (duas placas) deixa de ser necessária: `firmware/bolsao/bolsao.ino` junta a leitura original, a página local (opcional) e o envio pelo Wi-Fi do campus. As pastas `firmware/central` e `firmware/ponte` ficam como variante, caso os nós voltem a usar ESP-NOW. Um token por bolsão (`bolsao-a`, `bolsao-c`, `bolsao-h`).
+31. **Tela da guarita em `/guarita`, no lugar do `?painel=1`.** O PC da guarita é paisagem; a tela tem três colunas, relógio e a orientação para o vigia ("Mais vagas agora: Bloco H, 12 livres."). Com algum bolsão sem dado, a faixa avisa para conferir no local e nunca diz que está tudo lotado. A lógica de dados saiu do painel do celular para `useVagas`, usada pelas duas telas.

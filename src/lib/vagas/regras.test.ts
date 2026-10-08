@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { deslocamentoRelogio, especiaisLivres, idadeMs, limitePoucas, situacao, textoIdade, tipoDaVaga } from "./regras";
+import { deslocamentoRelogio, especiaisLivres, idadeMs, limitePoucas, orientacaoGuarita, situacao, textoIdade, tipoDaVaga } from "./regras";
 import { EsquemaBolsao } from "./tipos";
 
 const AGORA = Date.parse("2026-10-08T22:00:00.000Z");
@@ -103,5 +103,58 @@ describe("EsquemaBolsao", () => {
   it("recusa linha estranha", () => {
     expect(EsquemaBolsao.safeParse({ id: "a", nome: "x", ordem: 1 }).success).toBe(false);
     expect(EsquemaBolsao.safeParse({ id: "A", nome: "Bloco A", ordem: 1, total_vagas: 1, vagas_livres: 0, vagas: [1], especiais: {}, atualizado_em: null }).success).toBe(false);
+  });
+});
+
+describe("orientacaoGuarita", () => {
+  function b(id: string, ordem: number, livres: number | null, total = 10) {
+    const vagas = livres === null ? null : Array.from({ length: total }, (_, i) => i >= livres);
+    return { id, nome: `Bloco ${id}`, ordem, total_vagas: livres === null ? null : total, vagas_livres: livres, vagas, especiais: {}, atualizado_em: livres === null ? null : iso(1000) };
+  }
+  const sit = (bs: ReturnType<typeof b>[]) => new Map(bs.map((x) => [x.id, situacao(x, AGORA)]));
+
+  it("indica o bolsão com mais vagas livres", () => {
+    const bs = [b("A", 1, 2), b("C", 2, 0), b("H", 3, 7)];
+    const o = orientacaoGuarita(bs, sit(bs));
+    expect(o.tipo).toBe("indicar");
+    expect(o.indicado?.id).toBe("H");
+    expect(o.texto).toBe("Mais vagas agora: Bloco H, 7 livres.");
+    expect(o.detalhe).toBeNull();
+  });
+
+  it("empate fica com a ordem da tela, e uma vaga usa singular", () => {
+    const bs = [b("A", 1, 1), b("C", 2, 1), b("H", 3, 0)];
+    const o = orientacaoGuarita(bs, sit(bs));
+    expect(o.indicado?.id).toBe("A");
+    expect(o.texto).toBe("Mais vagas agora: Bloco A, 1 livre.");
+  });
+
+  it("bolsão sem dado nunca é indicado e gera aviso para conferir", () => {
+    const bs = [b("A", 1, 3), b("C", 2, null), b("H", 3, null)];
+    const o = orientacaoGuarita(bs, sit(bs));
+    expect(o.indicado?.id).toBe("A");
+    expect(o.detalhe).toBe("Blocos C e H sem dados: confira no local.");
+  });
+
+  it("com o resto lotado e um sem dado, não diz que está tudo lotado", () => {
+    const bs = [b("A", 1, 0), b("C", 2, 0), b("H", 3, null)];
+    const o = orientacaoGuarita(bs, sit(bs));
+    expect(o.tipo).toBe("sem-dados");
+    expect(o.texto).not.toMatch(/três bolsões estão lotados/);
+    expect(o.detalhe).toBe("Bloco H sem dados: confira no local.");
+  });
+
+  it("tudo sem dado pede para conferir no local", () => {
+    const bs = [b("A", 1, null), b("C", 2, null), b("H", 3, null)];
+    const o = orientacaoGuarita(bs, sit(bs));
+    expect(o.tipo).toBe("sem-dados");
+    expect(o.texto).toBe("Os sensores não estão mandando dados.");
+  });
+
+  it("só diz lotado quando os três têm dado fresco e zero vagas", () => {
+    const bs = [b("A", 1, 0), b("C", 2, 0), b("H", 3, 0)];
+    const o = orientacaoGuarita(bs, sit(bs));
+    expect(o.tipo).toBe("lotado");
+    expect(o.texto).toBe("Os três bolsões estão lotados.");
   });
 });

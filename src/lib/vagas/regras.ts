@@ -93,3 +93,61 @@ export function tipoDaVaga(especiais: Bolsao["especiais"], indice: number): stri
   }
   return null;
 }
+
+export interface Orientacao {
+  tipo: "indicar" | "lotado" | "sem-dados";
+  /** Bolsão com mais vagas livres entre os que têm dado fresco. */
+  indicado: Bolsao | null;
+  /** Bolsões sem dado recente: o vigia não pode dizer que estão lotados. */
+  semDados: Bolsao[];
+  texto: string;
+  detalhe: string | null;
+}
+
+function listaNomes(bs: Bolsao[]): string {
+  const ids = bs.map((b) => b.id);
+  if (ids.length <= 1) return ids.join("");
+  return `${ids.slice(0, -1).join(", ")} e ${ids[ids.length - 1]}`;
+}
+
+/**
+ * O que a tela da guarita diz ao vigia. Só indica bolsão com dado fresco e vaga livre;
+ * bolsão sem dado nunca entra na conta de "lotado".
+ */
+export function orientacaoGuarita(bolsoes: Bolsao[], situacoes: Map<string, Situacao>): Orientacao {
+  const semDados = bolsoes.filter((b) => (situacoes.get(b.id) ?? "sem-dados") === "sem-dados");
+  const comVaga = bolsoes
+    .filter((b) => {
+      const s = situacoes.get(b.id);
+      return (s === "livre" || s === "poucas") && (b.vagas_livres ?? 0) > 0;
+    })
+    .sort((a, b) => (b.vagas_livres ?? 0) - (a.vagas_livres ?? 0) || a.ordem - b.ordem);
+
+  const avisoSemDados =
+    semDados.length === 0 ? null : semDados.length === 1 ? `Bloco ${semDados[0].id} sem dados: confira no local.` : `Blocos ${listaNomes(semDados)} sem dados: confira no local.`;
+
+  if (comVaga.length > 0) {
+    const b = comVaga[0];
+    const n = b.vagas_livres ?? 0;
+    return { tipo: "indicar", indicado: b, semDados, texto: `Mais vagas agora: ${b.nome}, ${n} ${n === 1 ? "livre" : "livres"}.`, detalhe: avisoSemDados };
+  }
+  if (semDados.length === bolsoes.length) {
+    return {
+      tipo: "sem-dados",
+      indicado: null,
+      semDados,
+      texto: "Os sensores não estão mandando dados.",
+      detalhe: "Confira no local antes de dizer ao motorista que está lotado.",
+    };
+  }
+  if (semDados.length > 0) {
+    return {
+      tipo: "sem-dados",
+      indicado: null,
+      semDados,
+      texto: "Os bolsões com sensor funcionando estão lotados.",
+      detalhe: avisoSemDados,
+    };
+  }
+  return { tipo: "lotado", indicado: null, semDados, texto: bolsoes.length === 3 ? "Os três bolsões estão lotados." : "Todos os bolsões estão lotados.", detalhe: null };
+}

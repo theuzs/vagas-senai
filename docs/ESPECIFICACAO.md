@@ -168,7 +168,7 @@ Visual:
 
 1. Mapa esquemático do campus em SVG próprio, inspirado em `docs/mapa-senai-blumenau.jpg` sem copiar a arte: guarita, blocos A, C e H e os três bolsões com número ou estado. Fica abaixo da linha de cartões.
 2. Rota `/qr`: folha A4 para imprimir e colar na guarita, com QR code para `https://vagas.rubysistemas.com.br` e a frase "Aponte a câmera para ver as vagas livres agora".
-3. `?painel=1`: modo para TV ou tablet na guarita, só os cartões, em tamanho grande.
+3. `/guarita`: tela do PC da guarita, em paisagem e sem rolagem. Três colunas grandes, relógio, e uma faixa embaixo dizendo ao vigia qual bolsão tem mais vaga. Bolsão sem dado mostra "Não diga que está lotado. Confira no local." e nunca entra na conta de lotado. Pede ao navegador para não apagar a tela (Wake Lock).
 
 ## 4. Firmware
 

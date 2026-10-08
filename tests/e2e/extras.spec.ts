@@ -19,18 +19,66 @@ test("o mapa mostra cada bolsão com o número ou o estado", async ({ page }) =>
   await expect(page.getByTestId("mapa-H")).not.toContainText(/\d/);
 });
 
-test("?painel=1 mostra só os cartões, grandes", async ({ page }) => {
-  await supabaseFalso(page, {
-    bolsoes: [linha("A", "Bloco A", 1, "0000000000", agoraIso()), linha("C", "Bloco C", 2, "1111", agoraIso()), linha("H", "Bloco H", 3, null, null)],
-    agora: agoraIso,
+test.describe("tela da guarita", () => {
+  for (const tela of [
+    { width: 1366, height: 768 },
+    { width: 1920, height: 1080 },
+  ]) {
+    test(`cabe sem rolagem em ${tela.width}x${tela.height} e mostra os três lado a lado`, async ({ page }) => {
+      await page.setViewportSize(tela);
+      await supabaseFalso(page, {
+        bolsoes: [linha("A", "Bloco A", 1, "0".repeat(12) + "1".repeat(28), agoraIso()), linha("C", "Bloco C", 2, "1111", agoraIso()), linha("H", "Bloco H", 3, null, null)],
+        agora: agoraIso,
+      });
+      await page.goto("/guarita");
+      await expect(page.getByTestId("guarita-A")).toHaveAttribute("data-situacao", "livre");
+      const caixas = await Promise.all(["A", "C", "H"].map((id) => page.getByTestId(`guarita-${id}`).boundingBox()));
+      const [a, c, h] = caixas as { x: number; y: number; width: number; height: number }[];
+      expect(Math.abs(a.y - c.y)).toBeLessThan(2);
+      expect(Math.abs(c.y - h.y)).toBeLessThan(2);
+      expect(a.x + a.width).toBeLessThan(c.x);
+      expect(c.x + c.width).toBeLessThan(h.x);
+      const rolagem = await page.evaluate(() => ({ w: document.documentElement.scrollWidth, h: document.documentElement.scrollHeight }));
+      expect(rolagem.w).toBeLessThanOrEqual(tela.width);
+      expect(rolagem.h).toBeLessThanOrEqual(tela.height);
+      const orientacao = page.getByTestId("orientacao");
+      const caixaOrientacao = await orientacao.boundingBox();
+      expect(caixaOrientacao!.y + caixaOrientacao!.height).toBeLessThanOrEqual(tela.height);
+    });
+  }
+
+  test("indica o bolsão com mais vaga e avisa sobre o que está sem dados", async ({ page }) => {
+    await page.setViewportSize({ width: 1366, height: 768 });
+    await supabaseFalso(page, {
+      bolsoes: [linha("A", "Bloco A", 1, "0011111111", agoraIso()), linha("C", "Bloco C", 2, "1111", agoraIso()), linha("H", "Bloco H", 3, null, null)],
+      agora: agoraIso,
+    });
+    await page.goto("/guarita");
+    await expect(page.getByTestId("orientacao")).toHaveAttribute("data-tipo", "indicar");
+    await expect(page.getByTestId("orientacao")).toContainText("Mais vagas agora: Bloco A, 2 livres.");
+    await expect(page.getByTestId("orientacao")).toContainText("Bloco H sem dados: confira no local.");
+    await expect(page.getByTestId("guarita-A")).toHaveAttribute("data-indicado", "sim");
+    await expect(page.getByTestId("guarita-C")).toContainText("LOTADO");
+    await expect(page.getByTestId("guarita-H")).toContainText("SEM DADOS");
+    await expect(page.getByTestId("guarita-H")).toContainText("Não diga que está lotado");
+    await expect(page.getByTestId("guarita-H")).not.toContainText(/\d+/);
+    await expect(page.getByTestId("relogio")).toHaveText(/^\d{2}:\d{2}$/);
   });
-  await page.goto("/?painel=1");
-  await expect(page.getByTestId("cartao-A")).toContainText("10");
-  await expect(page.getByTestId("secao-A")).toHaveCount(0);
-  await expect(page.getByTestId("mapa")).toHaveCount(0);
-  const caixa = await page.getByTestId("cartao-A").boundingBox();
-  expect(caixa!.height).toBeGreaterThan(300);
-  await expect(page.getByTestId("faixa-demo")).toHaveCount(0);
+
+  test("com o resto lotado e um sem dado, nunca diz que está tudo lotado", async ({ page }) => {
+    await page.setViewportSize({ width: 1366, height: 768 });
+    await page.clock.install();
+    await supabaseFalso(page, {
+      bolsoes: [linha("A", "Bloco A", 1, "1111", agoraIso()), linha("C", "Bloco C", 2, "1111", agoraIso()), linha("H", "Bloco H", 3, "1111", agoraIso())],
+      agora: agoraIso,
+    });
+    await page.goto("/guarita");
+    await expect(page.getByTestId("orientacao")).toHaveAttribute("data-tipo", "lotado");
+    await page.clock.fastForward(31_000);
+    await expect(page.getByTestId("orientacao")).toHaveAttribute("data-tipo", "sem-dados");
+    await expect(page.getByTestId("orientacao")).not.toContainText("lotados");
+    await expect(page.getByTestId("orientacao")).toContainText("Confira no local");
+  });
 });
 
 test("/qr tem o QR code e o endereço", async ({ page }) => {
