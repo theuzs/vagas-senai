@@ -42,10 +42,10 @@ DATABASE_URL="postgres://postgres.<ref>:<senha>@aws-0-<regiao>.pooler.supabase.c
 
 O script registra o que já rodou em `vagas.migracoes` e não toca em nada fora do schema. Se preferir, cole o conteúdo de `db/migracoes/0001_vagas.sql` no SQL Editor do Supabase. Depois, em Project Settings → Data API → Exposed schemas, acrescente `vagas`.
 
-## Token da central
+## Token de cada bolsão
 
 ```
-npm run token:gerar -- central-1 "Central da guarita"
+npm run token:gerar -- bolsao-a "Bolsão A"
 ```
 
 Mostra o token (vai para o topo do `bolsao.ino`) e um SQL com o hash (vai para o SQL Editor). Gere um por bolsão (`bolsao-a`, `bolsao-c`, `bolsao-h`): se um ESP32 for levado, só o token dele é trocado. O banco nunca guarda o token em texto. Para trocar, rode de novo: o antigo deixa de valer.
