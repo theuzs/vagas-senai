@@ -1,0 +1,90 @@
+@import "tailwindcss";
+
+/*
+ * Tema escuro por padrão: o uso é à noite, muitas vezes no celular dentro do carro.
+ * As cores de estado (livre, poucas, lotado, sem dados) nunca são o único sinal:
+ * texto, ícone e listras acompanham.
+ */
+:root {
+  --fundo: #0f1419;
+  --superficie: #182028;
+  --superficie-2: #1f2a34;
+  --borda: #2c3a47;
+  --texto: #eef3f7;
+  --texto-secundario: #9fb0bf;
+  --destaque: #3b82f6;
+
+  --livre: #22c55e;
+  --livre-fundo: #0f2f1c;
+  --poucas: #f59e0b;
+  --poucas-fundo: #3a2a06;
+  --lotado: #ef4444;
+  --lotado-fundo: #3b1111;
+  --sem-dados: #fbbf24;
+  --sem-dados-fundo: #2a2a2a;
+  --vaga-ocupada: #566270;
+  --vaga-livre: #22c55e;
+  --vaga-especial: #60a5fa;
+  --vaga-neutra: #2c3a47;
+}
+
+@theme inline {
+  --color-fundo: var(--fundo);
+  --color-superficie: var(--superficie);
+  --color-superficie-2: var(--superficie-2);
+  --color-borda: var(--borda);
+  --color-texto: var(--texto);
+  --color-texto-secundario: var(--texto-secundario);
+  --color-destaque: var(--destaque);
+  --color-livre: var(--livre);
+  --color-poucas: var(--poucas);
+  --color-lotado: var(--lotado);
+  --color-sem-dados: var(--sem-dados);
+  --font-sans: var(--font-inter), system-ui, sans-serif;
+}
+
+html {
+  color-scheme: dark;
+}
+
+body {
+  background: var(--fundo);
+  color: var(--texto);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+:focus-visible {
+  outline: 3px solid var(--destaque);
+  outline-offset: 2px;
+}
+
+/* Fundo listrado do estado SEM DADOS: lê sem depender de cor. */
+.listrado {
+  background-image: repeating-linear-gradient(
+    135deg,
+    transparent 0 8px,
+    rgb(255 255 255 / 0.06) 8px 16px
+  );
+}
+
+/* Número pulsa de leve quando muda. Quem pediu menos movimento não vê. */
+@keyframes pulso {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(1.12);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+.pulso {
+  animation: pulso 400ms ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  .pulso {
+    animation: none;
+  }
+}

@@ -1,0 +1,49 @@
+{
+  "name": "vagas-senai",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:db": "vitest run --project db",
+    "test:e2e": "playwright test",
+    "check": "npm run lint && npm run typecheck && npm run test",
+    "db:aplicar": "tsx scripts/db-aplicar.ts",
+    "token:gerar": "tsx scripts/gerar-token.ts",
+    "simular:ponte": "tsx scripts/simular-ponte.ts",
+    "icones": "tsx scripts/gerar-icones.ts"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "2.117.1",
+    "next": "16.3.6",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "zod": "4.6.5"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.63.0",
+    "@tailwindcss/postcss": "4.3.3",
+    "@testing-library/jest-dom": "7.0.1",
+    "@testing-library/react": "16.3.3",
+    "@types/node": "22.20.4",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@vitejs/plugin-react": "6.1.1",
+    "dotenv": "18.0.3",
+    "embedded-postgres": "18.4.0-beta.17",
+    "eslint": "9.39.5",
+    "eslint-config-next": "16.3.6",
+    "jsdom": "29.1.1",
+    "postgres": "3.4.9",
+    "tailwindcss": "4.3.3",
+    "tsx": "4.23.15",
+    "typescript": "5.9.3",
+    "vite": "^8.3.1",
+    "vitest": "5.0.1"
+  }
+}
