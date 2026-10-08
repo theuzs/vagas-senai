@@ -30,6 +30,19 @@ Para o João:
 Para o Matheus:
 - Reservar o subdomínio `vagas` no WebSiteFoods, para ninguém criar uma loja com esse nome? É opcional.
 
-## Decididas durante a noite
+## Decididas durante a noite (07 para 08/10/2026)
 
-(o agente da noite acrescenta aqui)
+16. **Base montada à mão, sem `create-next-app`.** O gerador não aceita pasta com arquivos e traria versões diferentes. O `package.json` fixa as mesmas versões do WebSiteFoods. O `npm install` precisa de `--legacy-peer-deps`: o npm 11.1 quebra ao resolver os peers opcionais do Vitest 5 (erro `edgesOut`). Por isso `vite` e `@testing-library/dom` estão declarados de forma explícita.
+17. **Migration do próprio projeto registra em `vagas.migracoes`.** Script `scripts/db-aplicar.ts`, com a lógica em `scripts/migracoes.ts` para o teste de banco cobrir.
+18. **Limite de 500 vagas conferido por `length`, não por regex.** O regex do Postgres não aceita `{1,500}` (limite de 255).
+19. **O total de vagas de um bolsão vem do tamanho da lista que o nó manda.** Não há cadastro de quantas vagas cada bolsão tem; a função `publicar` atualiza `total_vagas` a cada envio.
+20. **`agora()` é chamada junto com a carga.** A página mede o relógio do servidor na carga, a cada 5 min e ao voltar para a aba. Sem resposta, usa o relógio do aparelho.
+21. **"Poucas vagas" = até `max(3, 10 %)` do total.** Com 3 vagas, 3 livres ainda conta como "poucas". Os testes refletem isso.
+22. **`?demo=1` e `?painel=1` são lidos no navegador com `useSyncExternalStore`.** A página continua estática (prerender) e sem `searchParams` no servidor.
+23. **Teste de "sem variável de ambiente" é de componente, não E2E.** As variáveis `NEXT_PUBLIC_*` entram no build, então um E2E precisaria de outro build. O componente aceita `configuracao={null}` e o teste jsdom cobre o aviso e o SEM DADOS.
+24. **Simulação do Supabase no E2E.** O Playwright responde o REST (`page.route`) e o WebSocket do Realtime (`page.routeWebSocket`, protocolo Phoenix v2). Nenhum teste toca o Supabase real.
+25. **Ícones da PWA gerados pelo Chromium do Playwright** (`npm run icones`), a partir de `public/icone.svg`, sem dependência nativa. O `apple-icon.png` fica em `src/app/` e o Next liga sozinho.
+26. **Firmware escrito para o core arduino-esp32 3.x** (compilado no 3.3.12), com `#if` para o 2.x no watchdog e no WPA2-Enterprise. Buffer serial de 8 KB em vez de 4 KB, para aguentar um POST lento.
+27. **Trecho da central sem o código real.** `saida_ponte.h` é genérico e compila; o encaixe no callback do ESP-NOW está descrito com um pacote hipotético em `firmware/central/LEIAME.md`.
+28. **Extras feitos:** mapa esquemático em SVG próprio, `/qr` (folha A4, QR gerado no build com o pacote `qrcode`) e `?painel=1`. O endereço do QR vem de `NEXT_PUBLIC_ENDERECO_PUBLICO`, com `https://vagas.rubysistemas.com.br` como padrão.
+29. **Capturas de tela** em `docs/telas/`, tiradas por `CAPTURAS=1 npx playwright test capturas`.

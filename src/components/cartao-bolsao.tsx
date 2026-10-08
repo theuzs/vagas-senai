@@ -54,8 +54,8 @@ export function CartaoBolsao({ bolsao, situacao, grande = false }: { bolsao: Bol
           SEM DADOS
         </span>
       ) : situacao === "lotado" ? (
-        <span className={`flex flex-col items-center gap-1 ${grande ? "text-3xl" : "text-sm"} font-black leading-tight ${e.texto}`}>
-          <span className={`${grande ? "text-8xl" : "text-2xl"} leading-none`}>0</span>
+        <span className={`flex flex-col items-center gap-1 ${grande ? "text-[clamp(1rem,5.5vw,2.5rem)]" : "text-sm"} font-black leading-tight ${e.texto}`}>
+          <span className={`${grande ? "text-[clamp(4rem,14vw,9rem)]" : "text-2xl"} leading-none`}>0</span>
           LOTADO
         </span>
       ) : (
