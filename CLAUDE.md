@@ -7,7 +7,7 @@ Monitor das vagas de estacionamento dos bolsões A, C e H do SENAI Blumenau no p
 - Ordem de trabalho e critérios de pronto: `docs/PLANO.md`
 - Decisões e perguntas em aberto: `docs/DECISOES.md`
 
-Caminho dos dados: nós ESP32 (ESP-NOW, 1 s) → central (placa atual) → fio serial → ponte ESP32 (Wi-Fi do campus) → HTTPS a cada 10 s → função `vagas.publicar` no Supabase → tabela `vagas.bolsoes` → Realtime → página em `vagas.rubysistemas.com.br`.
+Caminho dos dados: um ESP32 por bolsão lê um sensor por vaga e, pelo Wi-Fi do campus, chama `vagas.publicar` no Supabase a cada 10 s (`firmware/bolsao/bolsao.ino`, um arquivo só) → tabela `vagas.bolsoes` → Realtime → página em `vagas.rubysistemas.com.br`. A variante com central + ponte (`firmware/central`, `firmware/ponte`) fica guardada para o caso de os nós voltarem a usar ESP-NOW.
 
 ## Regra do produto acima de todas
 
@@ -21,7 +21,6 @@ O Supabase, o domínio e a conta Vercel são os mesmos do WebSiteFoods, que tem 
 - Nunca use `supabase link`, `supabase db push` nem `supabase migration`. A tabela de histórico de migrations do Supabase pertence ao WebSiteFoods. As migrations daqui ficam em `db/migracoes` e são aplicadas por `npm run db:aplicar`, que registra o que já rodou em `vagas.migracoes`.
 - A chave `service_role` não é usada neste projeto: nem no firmware, nem na Vercel, nem em scripts.
 - O ESP32 nunca fica exposto na internet (nada de port forwarding). Ele só faz requisições de saída.
-- A comunicação ESP-NOW entre nós e central não muda.
 - O repositório do WebSiteFoods (`../WebSiteFoods`) pode ser lido como referência, mas não deve ser alterado.
 
 ## Stack
@@ -29,7 +28,7 @@ O Supabase, o domínio e a conta Vercel são os mesmos do WebSiteFoods, que tem 
 - Next.js (App Router) + TypeScript estrito + Tailwind, nas mesmas versões do WebSiteFoods. A página não tem código de servidor nem segredo: lê com supabase-js usando a chave pública.
 - Supabase: Postgres e Realtime (`postgres_changes` em `vagas.bolsoes`).
 - Testes: Vitest (regras e componentes), Vitest com Postgres embutido para banco e RLS (sem Docker) e Playwright (E2E).
-- Firmware: Arduino C++ para ESP32 em `firmware/`.
+- Firmware: Arduino C++ para ESP32 em `firmware/`, no estilo do código do João: um arquivo, configuração em `const` no topo, sem `config.h`.
 
 ## Comandos
 

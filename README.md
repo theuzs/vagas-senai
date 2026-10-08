@@ -1,9 +1,9 @@
 # Vagas SENAI Blumenau
 
-Monitor das vagas de estacionamento dos bolsões A, C e H do SENAI Blumenau. Cada vaga tem um sensor; um ESP32 por bolsão manda o estado para a central por ESP-NOW; a central repassa por fio para a ponte, que publica no Supabase pelo Wi-Fi do campus; a página mostra os três bolsões ao vivo em `vagas.rubysistemas.com.br`.
+Monitor das vagas de estacionamento dos bolsões A, C e H do SENAI Blumenau. Cada vaga tem um sensor; um ESP32 por bolsão lê os sensores e publica o estado no Supabase pelo Wi-Fi do campus; a página mostra os três bolsões ao vivo em `vagas.rubysistemas.com.br`.
 
 ```
-nós (ESP-NOW) → central → fio serial → ponte (Wi-Fi) → Supabase → página → celular
+ESP32 do bolsão (Wi-Fi) → Supabase → página → celular
 ```
 
 Regra principal: bolsão sem dado há mais de 30 s mostra **SEM DADOS**, nunca zero. Zero só aparece com dado fresco, e aí a tela diz LOTADO.
@@ -48,24 +48,23 @@ O script registra o que já rodou em `vagas.migracoes` e não toca em nada fora 
 npm run token:gerar -- central-1 "Central da guarita"
 ```
 
-Mostra o token (vai para `firmware/ponte/config.h`) e um SQL com o hash (vai para o SQL Editor). O banco nunca guarda o token em texto. Para trocar o token, rode de novo: o antigo deixa de valer.
+Mostra o token (vai para o topo do `bolsao.ino`) e um SQL com o hash (vai para o SQL Editor). Gere um por bolsão (`bolsao-a`, `bolsao-c`, `bolsao-h`): se um ESP32 for levado, só o token dele é trocado. O banco nunca guarda o token em texto. Para trocar, rode de novo: o antigo deixa de valer.
 
-## O que colar no firmware
+## Firmware
 
-- `firmware/central/saida_ponte.h`: inclua na central atual e chame `enviarParaPonte(id, estados, n)` no `loop()` a cada pacote recebido. Passo a passo em `firmware/central/LEIAME.md`.
-- `firmware/ponte/ponte.ino`: firmware completo do ESP32 novo. Copie `config.exemplo.h` para `config.h` e preencha Wi-Fi, URL e chave anon do Supabase e o token.
+`firmware/bolsao/bolsao.ino` é o arquivo único de cada bolsão: leitura dos sensores (igual ao código original), página local opcional e envio para o Supabase. Preencha o bloco de configuração no topo (`ID_BOLSAO`, pinos, Wi-Fi, URL e chave anon, token) e grave um por bolsão. Não faça commit do arquivo com o token preenchido. Detalhes em `firmware/LEIAME.md`.
 
 ## Testar o caminho completo
 
 1. Sem hardware: `TOKEN_CENTRAL=<token> npm run simular:ponte` publica dados aleatórios a cada 10 s. Abra a página no celular e veja os números mudarem. Pare o simulador: em até 30 s os três bolsões viram SEM DADOS. `npm run simular:ponte -- --parar H` deixa só o H sem dado.
-2. Com a ponte: grave o firmware, abra o monitor serial em 115200 e espere `[http] ok`. Ligue a central no fio. A página passa a seguir os sensores.
+2. Com o ESP32 do bolsão: grave o firmware, abra o monitor serial em 115200 e espere `[http] ok`. A página passa a seguir os sensores.
 
 ## Variáveis de ambiente
 
 | variável | onde | pode ficar exposta? |
 |---|---|---|
-| `NEXT_PUBLIC_SUPABASE_URL` | Vercel, `.env.local`, `config.h` | sim |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Vercel, `.env.local`, `config.h` | sim: só lê `vagas.bolsoes` e chama `publicar` (que exige o token) e `agora` |
-| `TOKEN_CENTRAL` | `config.h` da ponte e ambiente do simulador | não |
+| `NEXT_PUBLIC_SUPABASE_URL` | Vercel, `.env.local`, `bolsao.ino` | sim |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Vercel, `.env.local`, `bolsao.ino` | sim: só lê `vagas.bolsoes` e chama `publicar` (que exige o token) e `agora` |
+| `TOKEN_CENTRAL` | topo do `bolsao.ino` e ambiente do simulador | não |
 | `DATABASE_URL` | só no computador, na hora do `db:aplicar` | não, e nunca na Vercel |
 | `SUPABASE_SERVICE_ROLE_KEY` | não é usada aqui | nunca, em lugar nenhum deste projeto |

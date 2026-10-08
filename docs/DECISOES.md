@@ -46,3 +46,9 @@ Para o Matheus:
 27. **Trecho da central sem o código real.** `saida_ponte.h` é genérico e compila; o encaixe no callback do ESP-NOW está descrito com um pacote hipotético em `firmware/central/LEIAME.md`.
 28. **Extras feitos:** mapa esquemático em SVG próprio, `/qr` (folha A4, QR gerado no build com o pacote `qrcode`) e `?painel=1`. O endereço do QR vem de `NEXT_PUBLIC_ENDERECO_PUBLICO`, com `https://vagas.rubysistemas.com.br` como padrão.
 29. **Capturas de tela** em `docs/telas/`, tiradas por `CAPTURAS=1 npx playwright test capturas`.
+
+## Confirmadas em 08/10/2026
+
+O Matheus confirmou as 29 e acrescentou:
+
+30. **Um ESP32 por bolsão fala direto com o Supabase, em um arquivo só.** O código real dos nós (`bolsao.ino` original do João) lê os sensores e serve uma página no softAP; não há ESP-NOW nem central. Então a decisão 3 (duas placas) deixa de ser necessária: `firmware/bolsao/bolsao.ino` junta a leitura original, a página local (opcional) e o envio pelo Wi-Fi do campus. As pastas `firmware/central` e `firmware/ponte` ficam como variante, caso os nós voltem a usar ESP-NOW. Um token por bolsão (`bolsao-a`, `bolsao-c`, `bolsao-h`).

@@ -1,63 +1,52 @@
 # Firmware
 
 ```
-nós (ESP-NOW) ──► central (placa atual) ──fio serial──► ponte (Wi-Fi do campus) ──HTTPS──► Supabase
-                                                            └─► LCD na guarita (opcional)
+ESP32 do bolsão (sensores + Wi-Fi do campus) ──HTTPS a cada 10 s──► Supabase ──► página
+        └─► página local em 192.168.4.1 (opcional, igual à original)
 ```
 
-- `central/`: o trecho que a central atual precisa para mandar os dados pelo fio. Veja `central/LEIAME.md`.
-- `ponte/`: o firmware completo do ESP32 novo. Ele não participa do ESP-NOW.
+- `bolsao/bolsao.ino`: **o arquivo que vai em cada ESP32.** Leitura dos sensores (igual ao código original do João), página local opcional e envio para o Supabase.
+- `central/` e `ponte/`: variante para o caso de os nós voltarem a mandar por ESP-NOW para uma central. Não é preciso para o caminho atual.
 
-## Por que duas placas
+## Gravar um bolsão
 
-O ESP32 tem um rádio só. Se a central entrasse no Wi-Fi do campus, o ESP-NOW passaria para o canal do roteador e deixaria de ouvir os nós, que falam no canal do softAP atual. Rede de campus ainda troca de canal sozinha. Com duas placas a central não muda, os nós não mudam, e uma queda de internet ou um POST lento não atrapalha a recepção.
+1. Abra `bolsao/bolsao.ino` e preencha o bloco de configuração no topo:
+   - `ID_BOLSAO` ("A", "C" ou "H"), `NOME_BOLSAO`, `N_VAGAS` e os pinos;
+   - `WIFI_SSID`, `WIFI_SENHA` e, se a rede pedir usuário, `WIFI_USUARIO`;
+   - `SUPABASE_URL` e `SUPABASE_ANON_KEY` (Project Settings → Data API e API Keys);
+   - `TOKEN_CENTRAL`, de `npm run token:gerar -- bolsao-a "Bolsão A"` (um por bolsão).
+   - `MANTER_PAGINA_LOCAL`: 1 mantém a rede `Estacionamento-A` com a página; 0 desliga.
+2. Arduino IDE: placa "ESP32 Dev Module", grave. Ou `arduino-cli compile --fqbn esp32:esp32:esp32 firmware/bolsao` e `arduino-cli upload --fqbn esp32:esp32:esp32 -p COM5 firmware/bolsao`.
+3. Monitor serial em 115200. Esperado: `[wifi] conectado, IP ...` e depois `[http] ok, 3 livres, 180 ms` a cada 10 s (a primeira vez leva ~2 s por causa do TLS).
 
-## Ligação
-
-| Central | Ponte | LCD 20x4 I2C (opcional) |
-|---|---|---|
-| GPIO 17 (TX2) → | GPIO 16 (RX2) | |
-| GND ↔ | GND | GND |
-| | GPIO 21 (SDA) | SDA |
-| | GPIO 22 (SCL) | SCL |
-| | 5 V | VCC |
-
-## Gravar a ponte
-
-1. Copie `ponte/config.exemplo.h` para `ponte/config.h` e preencha Wi-Fi, URL e chave anon do Supabase e o token da central (`npm run token:gerar` na raiz do projeto). O `config.h` não vai para o git.
-2. Com a Arduino IDE: abra `ponte/ponte.ino`, placa "ESP32 Dev Module", e se for usar o LCD instale a biblioteca "LiquidCrystal I2C" (Frank de Brabander). Grave.
-3. Com o arduino-cli:
-
-```
-arduino-cli config init
-arduino-cli config add board_manager.additional_urls https://espressif.github.io/arduino-esp32/package_esp32_index.json
-arduino-cli core update-index
-arduino-cli core install esp32:esp32
-arduino-cli lib install "LiquidCrystal I2C"
-arduino-cli compile --fqbn esp32:esp32:esp32 firmware/ponte
-arduino-cli upload --fqbn esp32:esp32:esp32 -p COM5 firmware/ponte
-arduino-cli monitor -p COM5 -c baudrate=115200
-```
+Não faça commit do arquivo com o token ou a senha do Wi-Fi preenchidos.
 
 ## O que o monitor serial mostra
 
-- `[wifi] conectado, IP ...`: entrou na rede.
-- `[http] ok, 3 bolsões em 180 ms`: publicou. Na primeira vez leva ~2 s (handshake TLS); depois a conexão fica aberta.
-- `[http] token recusado (403)`: o token do `config.h` não bate com `vagas.centrais`, ou a central está com `ativa = false`.
-- `[http] erro 400 ...`: o banco recusou o payload (bolsão desconhecido, estado inválido). O texto diz qual.
-- `[http] falha de rede`: sem resposta. A ponte tenta de novo no próximo ciclo.
-- `[serial] linha descartada`: a central mandou algo fora do formato ou o fio está com ruído.
+- `[http] token recusado (403)`: o token não bate com `vagas.centrais`, ou a central está com `ativa = false`.
+- `[http] erro 400 ...`: o banco recusou o payload. Quase sempre `ID_BOLSAO` que não existe na tabela.
+- `[http] erro 404`: o schema `vagas` não está exposto na API do Supabase.
+- `[http] falha de rede`: sem resposta. Tenta de novo no próximo ciclo.
+- `[wifi] sem conexão há N s, tentando de novo`: refaz a conexão com espera crescente (30 s, 1, 2, 4, 5 min).
 
 ## Comportamento quando algo cai
 
-| Situação | Ponte | Página |
+| Situação | ESP32 | Página |
 |---|---|---|
-| Wi-Fi do campus cai | continua lendo a serial e o LCD; refaz o `begin` com espera crescente (30 s, 1, 2, 4, 5 min) | após 30 s, SEM DADOS nos três |
+| Wi-Fi do campus cai | continua lendo os sensores e servindo a página local; reconecta sozinho | após 30 s, aquele bolsão em SEM DADOS |
 | Supabase fora do ar | registra o erro, tenta a cada 10 s | após 30 s, SEM DADOS |
-| Nó do H morre | o H sai do payload depois de 5 s sem linha | após 30 s, só o H em SEM DADOS |
-| Central reinicia | sem linhas por alguns segundos; nada trava | SEM DADOS até a central voltar |
-| Ponte trava | watchdog de 30 s reinicia a placa | SEM DADOS até voltar |
+| ESP32 de um bolsão desliga | | só aquele bolsão em SEM DADOS |
+| Loop trava | watchdog de 30 s reinicia a placa | SEM DADOS até voltar |
 
-## Alternativa: placa única
+Durante um POST o loop pode ficar parado até 5 s (timeout). A leitura dos sensores pausa nesse tempo; com o filtro de 3 leituras, nenhum estado muda por causa disso. Se um dia isso incomodar, o envio pode ir para uma tarefa separada do FreeRTOS.
 
-Daria para rodar a lógica da ponte na própria central em modo `WIFI_AP_STA`: a central entra no Wi-Fi do campus como cliente e mantém o ESP-NOW. Isso só funciona se os nós falarem no mesmo canal do roteador do campus (`esp_wifi_set_channel` nos nós com o canal que o roteador usa) e se esse canal não mudar. Se a TI trocar o canal, ou se o roteador usar 5 GHz para o SSID (o ESP32 só pega 2,4 GHz), a central para de ouvir os nós sem avisar. Como os nós já estão instalados e o objetivo é confiabilidade, a versão com duas placas é a recomendada. Se um dia for necessário, o código de `ponte.ino` muda pouco: troque `WiFi.mode(WIFI_STA)` por `WIFI_AP_STA`, tire a leitura da serial e chame `processarLinha`/a atualização de `bolsoes[]` direto do `loop()` a partir do buffer do ESP-NOW.
+## Wi-Fi do campus
+
+- Só senha: preencha `WIFI_SSID` e `WIFI_SENHA`.
+- Usuário e senha (WPA2-Enterprise/PEAP): preencha também `WIFI_USUARIO`.
+- Página de login no navegador (portal cativo): o ESP32 não consegue passar. A TI precisa liberar o MAC da placa (aparece no monitor serial na linha `[bolsao] ... pronto, MAC ...`).
+- O ESP32 só pega 2,4 GHz.
+
+## Certificado TLS
+
+No protótipo `tls.setInsecure()` aceita qualquer certificado. Na versão final, troque pela linha comentada logo acima dele (`setCACertBundle`), que valida o Supabase com o pacote de raízes do próprio core.

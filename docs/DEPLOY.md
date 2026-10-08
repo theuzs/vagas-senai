@@ -28,12 +28,16 @@ Para conferir: Table Editor → schema `vagas` → `bolsoes` deve ter A, C e H c
 
 ## 3. Token da central
 
+Um por bolsão:
+
 ```
-npm run token:gerar -- central-1 "Central da guarita"
+npm run token:gerar -- bolsao-a "Bolsão A"
+npm run token:gerar -- bolsao-c "Bolsão C"
+npm run token:gerar -- bolsao-h "Bolsão H"
 ```
 
-1. Copie o SQL que aparece e execute no SQL Editor.
-2. Guarde o token: ele vai para `firmware/ponte/config.h` (`TOKEN_CENTRAL`). Ele não aparece de novo; se perder, rode o comando outra vez e grave o firmware de novo.
+1. Copie o SQL de cada um e execute no SQL Editor.
+2. Guarde cada token: ele vai no topo do `firmware/bolsao/bolsao.ino` daquele bolsão (`TOKEN_CENTRAL`). Não aparece de novo; se perder, rode o comando outra vez e grave o firmware de novo.
 
 ## 4. Vercel
 
@@ -57,7 +61,7 @@ npm run token:gerar -- central-1 "Central da guarita"
 2. Abra `https://vagas.rubysistemas.com.br` no celular. Em até 10 s os números aparecem e passam a mudar.
 3. Pare o simulador (Ctrl+C). Em até 30 s os três viram SEM DADOS.
 4. `npm run simular:ponte -- --parar H`: só o H fica em SEM DADOS.
-5. Com a ponte gravada e ligada no Wi-Fi do campus, o monitor serial mostra `[http] ok` a cada 10 s e a página passa a seguir os sensores.
+5. Com o ESP32 do bolsão gravado e no Wi-Fi do campus, o monitor serial mostra `[http] ok` a cada 10 s e a página passa a seguir os sensores.
 
 ## 7. QR code na guarita
 
@@ -70,6 +74,6 @@ Abra `https://vagas.rubysistemas.com.br/qr` e imprima (a página já vem em A4).
 | Página com "Configuração incompleta" | faltou variável na Vercel; confira o nome exato e faça redeploy |
 | Página com "não conseguiu ler os dados" | o schema `vagas` não está exposto (passo 1) ou a migration não rodou (passo 2) |
 | Status "Reconectando" o tempo todo | `vagas.bolsoes` não está na publicação Realtime; rode `alter publication supabase_realtime add table vagas.bolsoes;` |
-| Simulador ou ponte com 403 | token não bate: rode o SQL do `token:gerar` de novo e use o token novo |
-| Simulador ou ponte com 404 | schema não exposto (passo 1) |
-| Simulador ou ponte com 400 | payload inválido; a mensagem diz o bolsão e o motivo |
+| Simulador ou ESP32 com 403 | token não bate: rode o SQL do `token:gerar` de novo e use o token novo |
+| Simulador ou ESP32 com 404 | schema não exposto (passo 1) |
+| Simulador ou ESP32 com 400 | payload inválido (ex.: `ID_BOLSAO` que não existe na tabela); a mensagem diz o motivo |
