@@ -53,7 +53,7 @@ describe("PainelVagas", () => {
     const f = fonteFalsa([bolsao("A", 1, "111"), bolsao("C", 2, null), bolsao("H", 3, "0000000000")]);
     render(<PainelVagas configuracao={{ url: "https://x.supabase.co", chaveAnon: "chave-de-teste" }} fonte={f.fonte} modoInicial="supabase" />);
 
-    await screen.findByText("LOTADO");
+    await screen.findAllByText("LOTADO");
     expect(screen.getByTestId("cartao-C")).toHaveAttribute("data-situacao", "sem-dados");
     expect(screen.getByTestId("cartao-H")).toHaveAttribute("data-situacao", "livre");
 

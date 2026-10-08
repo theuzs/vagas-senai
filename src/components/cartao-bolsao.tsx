@@ -10,8 +10,12 @@ const ESTILO: Record<Situacao, { borda: string; fundo: string; texto: string }> 
   "sem-dados": { borda: "border-sem-dados border-dashed", fundo: "bg-[var(--sem-dados-fundo)] listrado", texto: "text-sem-dados" },
 };
 
-export function CartaoBolsao({ bolsao, situacao }: { bolsao: Bolsao; situacao: Situacao }) {
+export function CartaoBolsao({ bolsao, situacao, grande = false }: { bolsao: Bolsao; situacao: Situacao; grande?: boolean }) {
   const e = ESTILO[situacao];
+  // Modo painel (TV na guarita): tudo maior.
+  const t = grande
+    ? { letra: "text-6xl", numero: "text-[clamp(4rem,14vw,9rem)]", rotulo: "text-xl", estado: "text-2xl", icone: "h-10 w-10", altura: "min-h-[60vh]" }
+    : { letra: "text-3xl", numero: "text-4xl", rotulo: "text-xs", estado: "text-xs", icone: "h-5 w-5", altura: "min-h-[7.5rem]" };
   const livres = situacao === "sem-dados" ? null : bolsao.vagas_livres;
 
   // Pulsa quando o número muda (quem pediu menos movimento não vê, pelo CSS).
@@ -40,24 +44,24 @@ export function CartaoBolsao({ bolsao, situacao }: { bolsao: Bolsao; situacao: S
       data-testid={`cartao-${bolsao.id}`}
       data-situacao={situacao}
       aria-label={rotulo}
-      className={`flex min-h-[7.5rem] min-w-0 flex-1 flex-col items-center justify-between rounded-2xl border-2 px-1 py-3 text-center no-underline ${e.borda} ${e.fundo}`}
+      className={`flex ${t.altura} min-w-0 flex-1 flex-col items-center justify-between rounded-2xl border-2 px-1 py-3 text-center no-underline ${e.borda} ${e.fundo}`}
     >
-      <span className="text-sm font-semibold uppercase tracking-wide text-texto-secundario">Bloco</span>
-      <span className="text-3xl font-black leading-none text-texto">{bolsao.id}</span>
+      <span className={`${grande ? "text-xl" : "text-sm"} font-semibold uppercase tracking-wide text-texto-secundario`}>Bloco</span>
+      <span className={`${t.letra} font-black leading-none text-texto`}>{bolsao.id}</span>
       {situacao === "sem-dados" ? (
-        <span className={`flex flex-col items-center gap-1 text-xs font-bold leading-tight ${e.texto}`}>
-          <IconeAlerta />
+        <span className={`flex flex-col items-center gap-1 ${t.estado} font-bold leading-tight ${e.texto}`}>
+          <IconeAlerta className={t.icone} />
           SEM DADOS
         </span>
       ) : situacao === "lotado" ? (
-        <span className={`flex flex-col items-center gap-1 text-sm font-black leading-tight ${e.texto}`}>
-          <span className="text-2xl leading-none">0</span>
+        <span className={`flex flex-col items-center gap-1 ${grande ? "text-3xl" : "text-sm"} font-black leading-tight ${e.texto}`}>
+          <span className={`${grande ? "text-8xl" : "text-2xl"} leading-none`}>0</span>
           LOTADO
         </span>
       ) : (
         <span className={`flex flex-col items-center leading-tight ${e.texto}`}>
-          <span className={`text-4xl font-black leading-none ${pulsando ? "pulso" : ""}`}>{livres}</span>
-          <span className="text-xs font-semibold">{livres === 1 ? "livre" : "livres"}</span>
+          <span className={`${t.numero} font-black leading-none ${pulsando ? "pulso" : ""}`}>{livres}</span>
+          <span className={`${t.rotulo} font-semibold`}>{livres === 1 ? "livre" : "livres"}</span>
         </span>
       )}
     </a>

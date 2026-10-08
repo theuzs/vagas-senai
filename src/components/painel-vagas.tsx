@@ -6,6 +6,7 @@ import { BOLSOES_PADRAO } from "@/lib/vagas/padrao";
 import { deslocamentoRelogio, situacao } from "@/lib/vagas/regras";
 import type { Bolsao, Carga, FonteVagas, StatusConexao } from "@/lib/vagas/tipos";
 import { CartaoBolsao } from "./cartao-bolsao";
+import { MapaCampus } from "./mapa-campus";
 import { SecaoBolsao } from "./secao-bolsao";
 
 const INTERVALO_RELOGIO_MS = 5 * 60_000;
@@ -22,11 +23,14 @@ interface Props {
 
 const semAssinatura = () => () => {};
 const demoNoEndereco = () => new URLSearchParams(window.location.search).get("demo") === "1";
-const demoNoServidor = () => false;
+const painelNoEndereco = () => new URLSearchParams(window.location.search).get("painel") === "1";
+const falsoNoServidor = () => false;
 
 export function PainelVagas({ configuracao, fonte: fonteInjetada, modoInicial }: Props) {
   // A página é estática; ?demo=1 só existe no navegador. No servidor vale "sem demo".
-  const demo = useSyncExternalStore(semAssinatura, demoNoEndereco, demoNoServidor);
+  const demo = useSyncExternalStore(semAssinatura, demoNoEndereco, falsoNoServidor);
+  // ?painel=1: só os cartões, grandes, para uma TV ou tablet na guarita.
+  const painel = useSyncExternalStore(semAssinatura, painelNoEndereco, falsoNoServidor);
   const modo: Modo = modoInicial ?? (demo ? "demo" : configuracao ? "supabase" : "sem-configuracao");
 
   const [bolsoes, setBolsoes] = useState<Bolsao[]>(BOLSOES_PADRAO);
@@ -128,7 +132,7 @@ export function PainelVagas({ configuracao, fonte: fonteInjetada, modoInicial }:
   const situacoes = useMemo(() => new Map(bolsoes.map((b) => [b.id, situacao(b, agoraServidorMs)])), [bolsoes, agoraServidorMs]);
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-4" data-painel={painel ? "sim" : "nao"}>
       {modo === "demo" && (
         <p data-testid="faixa-demo" className="rounded-lg border border-poucas bg-[var(--poucas-fundo)] px-3 py-2 text-sm font-semibold text-poucas">
           Demonstração: dados simulados. Os números não são do estacionamento.
@@ -147,19 +151,23 @@ export function PainelVagas({ configuracao, fonte: fonteInjetada, modoInicial }:
 
       <Conexao status={status} modo={modo} />
 
-      <div className="flex gap-2" role="list" aria-label="Resumo dos bolsões" aria-live="polite">
+      <div className={`flex gap-2 ${painel ? "min-h-[60vh] gap-4" : ""}`} role="list" aria-label="Resumo dos bolsões" aria-live="polite">
         {bolsoes.map((b) => (
           <div key={b.id} role="listitem" className="flex min-w-0 flex-1">
-            <CartaoBolsao bolsao={b} situacao={situacoes.get(b.id) ?? "sem-dados"} />
+            <CartaoBolsao bolsao={b} situacao={situacoes.get(b.id) ?? "sem-dados"} grande={painel} />
           </div>
         ))}
       </div>
 
-      <div className="flex flex-col gap-3">
-        {bolsoes.map((b) => (
-          <SecaoBolsao key={b.id} bolsao={b} situacao={situacoes.get(b.id) ?? "sem-dados"} agoraServidorMs={agoraServidorMs} />
-        ))}
-      </div>
+      {!painel && <MapaCampus bolsoes={bolsoes} situacoes={situacoes} />}
+
+      {!painel && (
+        <div className="flex flex-col gap-3">
+          {bolsoes.map((b) => (
+            <SecaoBolsao key={b.id} bolsao={b} situacao={situacoes.get(b.id) ?? "sem-dados"} agoraServidorMs={agoraServidorMs} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
