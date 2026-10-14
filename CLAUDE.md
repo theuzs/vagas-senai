@@ -15,10 +15,10 @@ Bolsão sem dado recente nunca mostra número. Se `atualizado_em` for nulo ou ti
 
 ## Ambiente compartilhado
 
-O Supabase, o domínio e a conta Vercel são os mesmos do WebSiteFoods, que tem uma loja real em produção.
+O domínio e a conta Vercel são os mesmos do WebSiteFoods, que tem uma loja real em produção. O Supabase é um projeto próprio do SENAI (`hsfsejmhltkxiwniuunf`, decisão 32 em `docs/DECISOES.md`).
 
 - Tudo deste projeto fica no schema `vagas`. Nunca crie nada em `public` nem altere objetos fora de `vagas`.
-- Nunca use `supabase link`, `supabase db push` nem `supabase migration`. A tabela de histórico de migrations do Supabase pertence ao WebSiteFoods. As migrations daqui ficam em `db/migracoes` e são aplicadas por `npm run db:aplicar`, que registra o que já rodou em `vagas.migracoes`.
+- Nunca use `supabase link`, `supabase db push` nem `supabase migration`. As migrations daqui ficam em `db/migracoes` e são aplicadas por `npm run db:aplicar`, que registra o que já rodou em `vagas.migracoes`.
 - A chave `service_role` não é usada neste projeto: nem no firmware, nem na Vercel, nem em scripts.
 - O ESP32 nunca fica exposto na internet (nada de port forwarding). Ele só faz requisições de saída.
 - O repositório do WebSiteFoods (`../WebSiteFoods`) pode ser lido como referência, mas não deve ser alterado.

@@ -18,6 +18,8 @@ export interface Resultado {
 export async function aplicarMigracoes(sql: Sql, migracoes: Migracao[], opcoes: { conferir?: boolean } = {}): Promise<Resultado> {
   await sql.unsafe("create schema if not exists vagas");
   await sql.unsafe("create table if not exists vagas.migracoes (nome text primary key, aplicada_em timestamptz not null default now())");
+  // O schema vagas é exposto na API; sem RLS o painel do Supabase acusa a tabela como aberta.
+  await sql.unsafe("alter table vagas.migracoes enable row level security");
   const feitas = new Set((await sql<{ nome: string }[]>`select nome from vagas.migracoes`).map((r) => r.nome));
 
   const r: Resultado = { jaAplicadas: [], aplicadas: [], pendentes: [] };

@@ -110,6 +110,9 @@ describe("db:aplicar", () => {
 
     const registradas = await sql<{ nome: string }[]>`select nome from vagas.migracoes order by nome`;
     expect(registradas.map((r) => r.nome)).toEqual(lista.map((m) => m.nome));
+
+    const [rls] = await sql<{ ligada: boolean }[]>`select relrowsecurity as ligada from pg_class where oid = 'vagas.migracoes'::regclass`;
+    expect(rls.ligada).toBe(true);
   });
 
   it("uma migration com erro não é registrada", async () => {

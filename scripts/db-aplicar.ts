@@ -1,16 +1,19 @@
 /**
  * Aplica as migrations de db/migracoes num Postgres pela URL de conexão.
  *
- *   DATABASE_URL="postgres://..." npm run db:aplicar
- *   DATABASE_URL="postgres://..." npm run db:aplicar -- --conferir   só lista o que falta
+ *   npm run db:aplicar                  usa o DATABASE_URL do ambiente ou do .env.local
+ *   npm run db:aplicar -- --conferir    só lista o que falta
  *
  * Cada arquivo roda numa transação e é registrado em vagas.migracoes. Nada fora do
- * schema vagas é tocado, e a tabela supabase_migrations (do WebSiteFoods) fica em paz.
+ * schema vagas é tocado, e a tabela supabase_migrations fica em paz.
  */
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { config } from "dotenv";
 import postgres from "postgres";
 import { aplicarMigracoes } from "./migracoes";
+
+config({ path: ".env.local", quiet: true });
 
 const url = process.argv.find((a) => a.startsWith("postgres://") || a.startsWith("postgresql://")) ?? process.env.DATABASE_URL;
 const conferir = process.argv.includes("--conferir");

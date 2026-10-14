@@ -65,6 +65,18 @@ test.describe("tela da guarita", () => {
     await expect(page.getByTestId("relogio")).toHaveText(/^\d{2}:\d{2}$/);
   });
 
+  test("o relógio mostra a hora e a data de agora assim que abre, e não as do build", async ({ page }) => {
+    await page.setViewportSize({ width: 1366, height: 768 });
+    // Uma terça-feira longe da data do build. Aparelho e servidor concordam, então o
+    // deslocamento é zero e nada força o React a redesenhar o relógio.
+    const momento = "2030-03-05T23:17:05-03:00";
+    await page.clock.install({ time: new Date(momento) });
+    await supabaseFalso(page, { bolsoes: [linha("A", "Bloco A", 1, null, null)], agora: () => momento });
+    await page.goto("/guarita");
+    await expect(page.getByTestId("relogio")).toHaveText("23:17");
+    await expect(page.getByTestId("data-hoje")).toHaveText("Terça-feira, 5 de março");
+  });
+
   test("com o resto lotado e um sem dado, nunca diz que está tudo lotado", async ({ page }) => {
     await page.setViewportSize({ width: 1366, height: 768 });
     await page.clock.install();

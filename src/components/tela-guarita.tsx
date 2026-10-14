@@ -145,16 +145,23 @@ function ColunaBolsao({ bolsao, situacao, agoraServidorMs, indicado }: { bolsao:
   );
 }
 
+const semAssinatura = () => () => {};
+const noNavegador = () => true;
+const noServidor = () => false;
+
 function Relogio({ ms }: { ms: number }) {
+  // A página é gerada no build. Se a hora viesse do servidor, seria a do build, e o React
+  // manteria esse texto depois da hidratação até o minuto (e a data até o dia) mudar.
+  const noCliente = useSyncExternalStore(semAssinatura, noNavegador, noServidor);
   const texto = new Intl.DateTimeFormat("pt-BR", { weekday: "long", day: "numeric", month: "long", timeZone: "America/Sao_Paulo" }).format(new Date(ms));
   const data = texto.charAt(0).toUpperCase() + texto.slice(1);
   return (
-    <div className="text-right" suppressHydrationWarning>
-      <p data-testid="relogio" className="text-[clamp(1.6rem,3.4vw,3.8rem)] font-black leading-none tabular-nums" suppressHydrationWarning>
-        {horaCurta(ms)}
+    <div className="text-right">
+      <p data-testid="relogio" className="text-[clamp(1.6rem,3.4vw,3.8rem)] font-black leading-none tabular-nums">
+        {noCliente ? horaCurta(ms) : "--:--"}
       </p>
-      <p className="text-[clamp(0.75rem,1.1vw,1.1rem)] text-texto-secundario" suppressHydrationWarning>
-        {data}
+      <p data-testid="data-hoje" className="text-[clamp(0.75rem,1.1vw,1.1rem)] text-texto-secundario">
+        {noCliente ? data : " "}
       </p>
     </div>
   );

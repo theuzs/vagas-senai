@@ -1,6 +1,6 @@
 # Deploy
 
-Passo a passo para colocar a página no ar em `vagas.rubysistemas.com.br`, usando o Supabase, o domínio e a conta Vercel que já existem para o WebSiteFoods. Nada aqui mexe no que o WebSiteFoods usa.
+Passo a passo para colocar a página no ar em `vagas.rubysistemas.com.br`. O Supabase é um projeto próprio do SENAI (`hsfsejmhltkxiwniuunf`, região São Paulo). O domínio e a conta Vercel são os que já existem para o WebSiteFoods, e nada aqui mexe no que o WebSiteFoods usa.
 
 ## 1. Supabase: expor o schema
 
@@ -13,16 +13,22 @@ Isso só diz à API que o schema existe. Sem este passo a página recebe erro 40
 
 No seu computador, na pasta do projeto:
 
-1. No painel: Project Settings → Database → Connection string → aba **Transaction pooler** (porta 6543). Copie a URL e troque `[YOUR-PASSWORD]` pela senha do banco.
-2. Rode:
-
-```
-DATABASE_URL="postgres://postgres.<ref>:<senha>@aws-0-<regiao>.pooler.supabase.com:6543/postgres" npm run db:aplicar
-```
+1. No `.env.local`, preencha `DATABASE_URL` com a URL do **Session pooler**, trocando `<senha>` pela senha do banco:
+   ```
+   DATABASE_URL=postgresql://postgres.hsfsejmhltkxiwniuunf:<senha>@aws-1-sa-east-1.pooler.supabase.com:5432/postgres
+   ```
+   A conexão direta (`db.hsfsejmhltkxiwniuunf.supabase.co`) só tem endereço IPv6 e não funciona em toda rede. Por isso a URL é a do pooler.
+2. Rode `npm run db:aplicar`.
 
 Deve aparecer `aplicada 0001_vagas.sql`. Rodar de novo mostra `ok 0001_vagas.sql` e não faz nada.
 
-Se preferir não usar a URL do banco: abra o SQL Editor, cole o conteúdo de `db/migracoes/0001_vagas.sql` e execute. Depois rode `npm run db:aplicar -- --conferir` só se quiser que o script registre; não é obrigatório.
+Se preferir não usar a URL do banco: abra o SQL Editor, cole o conteúdo de `db/migracoes/0001_vagas.sql` e execute. Depois rode também o SQL abaixo, que registra a migration como aplicada. Sem esse registro, um `npm run db:aplicar` no futuro tenta rodar a 0001 de novo e para com erro de tabela já existente.
+
+```sql
+create table if not exists vagas.migracoes (nome text primary key, aplicada_em timestamptz not null default now());
+alter table vagas.migracoes enable row level security;
+insert into vagas.migracoes (nome) values ('0001_vagas.sql');
+```
 
 Para conferir: Table Editor → schema `vagas` → `bolsoes` deve ter A, C e H com `atualizado_em` vazio. Database → Publications → `supabase_realtime` deve listar `vagas.bolsoes`.
 
