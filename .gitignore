@@ -10,3 +10,4 @@ firmware/**/config.h
 tsconfig.tsbuildinfo
 next-env.d.ts
 firmware/bolsao/placas/
+.auditoria-ux/
