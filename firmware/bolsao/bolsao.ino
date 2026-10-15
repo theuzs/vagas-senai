@@ -329,6 +329,8 @@ void publicar() {
 // ---------------- página local (opcional) ----------------
 
 #if MANTER_PAGINA_LOCAL
+// Esta página roda sem internet. Não use fonte, script ou imagem de fora.
+// As cores são as do site (src/app/globals.css). Ícones em SVG inline, sem emoji.
 const char PAGINA[] PROGMEM = R"rawliteral(
 <!DOCTYPE html>
 <html lang="pt-BR">
@@ -337,40 +339,61 @@ const char PAGINA[] PROGMEM = R"rawliteral(
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Placa do estacionamento</title>
 <style>
-  :root { --bg:#0f1419; --card:#1a212b; --texto:#e8edf2; --suave:#8a96a3; --livre:#22c55e; --ocupada:#ef4444; --offline:#f59e0b; --sem-dados:#fbbf24; --sem-dados-fundo:#2a2a2a; }
+  /* copiado de src/app/globals.css; mantenha igual */
+  :root {
+    --fundo: #0f1419;
+    --superficie: #182028;
+    --superficie-2: #1f2a34;
+    --borda: #2c3a47;
+    --texto: #eef3f7;
+    --texto-secundario: #9fb0bf;
+    --destaque: #3b82f6;
+
+    --livre: #22c55e;
+    --livre-fundo: #0f2f1c;
+    --poucas: #f59e0b;
+    --poucas-fundo: #3a2a06;
+    --lotado: #f87171;
+    --lotado-fundo: #3b1111;
+    --sem-dados: #fbbf24;
+    --sem-dados-fundo: #2a2a2a;
+    --vaga-ocupada: #6b7785;
+    --vaga-livre: #22c55e;
+    --vaga-especial: #60a5fa;
+    --vaga-neutra: #2c3a47;
+  }
   * { box-sizing:border-box; margin:0; padding:0; }
-  body { font-family:system-ui,-apple-system,"Segoe UI",sans-serif; background:var(--bg); color:var(--texto); min-height:100vh; padding:24px 16px; display:flex; flex-direction:column; align-items:center; }
+  body { font-family:system-ui,-apple-system,"Segoe UI",sans-serif; background:var(--fundo); color:var(--texto); min-height:100vh; padding:24px 16px; display:flex; flex-direction:column; align-items:center; }
   header { text-align:center; margin-bottom:16px; }
   header h1 { font-size:1.4rem; font-weight:600; }
-  header p { color:var(--suave); font-size:.9rem; margin-top:4px; }
-  .faixa { width:100%; max-width:640px; border:2px solid var(--sem-dados); border-radius:12px; padding:10px 12px; margin-bottom:20px; display:flex; gap:10px; align-items:flex-start; color:var(--sem-dados); font-size:.95rem; line-height:1.35; }
+  header p { color:var(--texto-secundario); font-size:.9rem; margin-top:4px; }
+  .faixa { width:100%; max-width:640px; border:2px solid var(--sem-dados); background:var(--superficie); border-radius:12px; padding:10px 12px; margin-bottom:20px; display:flex; gap:10px; align-items:flex-start; color:var(--sem-dados); font-size:.95rem; line-height:1.35; }
   .faixa.ok { border-color:var(--livre); color:var(--livre); }
   .faixa .icone-faixa { width:1.4em; height:1.4em; flex:none; margin-top:.05em; }
   .faixa p + p { color:var(--texto); margin-top:4px; }
-  .resumo { background:var(--card); border-radius:20px; padding:24px 40px; text-align:center; margin-bottom:28px; border:2px solid var(--livre); transition:border-color .3s; }
-  .resumo.lotado { border-color:var(--ocupada); }
-  .resumo .numero { font-size:4rem; font-weight:700; line-height:1; }
-  .resumo .rotulo { color:var(--suave); margin-top:6px; }
+  .resumo { width:100%; max-width:640px; background:var(--superficie); border-radius:20px; padding:24px 16px; text-align:center; margin-bottom:28px; border:2px solid var(--livre); }
+  .resumo .numero { font-size:4rem; font-weight:700; line-height:1; color:var(--livre); }
+  .resumo .rotulo { color:var(--texto-secundario); margin-top:6px; }
+  .resumo.lotado { background:var(--lotado-fundo); border-color:var(--lotado); }
+  .resumo.lotado .numero { font-size:2.5rem; font-weight:800; color:var(--lotado); }
   /* SEM DADOS: borda tracejada, listras e ícone, como no site. Copiado de .listrado em src/app/globals.css. */
   .resumo.sem-dados { border:2px dashed var(--sem-dados); background-color:var(--sem-dados-fundo); background-image:repeating-linear-gradient(135deg,transparent 0 8px,rgb(255 255 255 / 0.06) 8px 16px); }
   .resumo.sem-dados .numero { font-size:2rem; color:var(--sem-dados); display:flex; align-items:center; justify-content:center; gap:10px; }
   .resumo.sem-dados .rotulo { color:var(--texto); }
   .alerta { width:1.25em; height:1.25em; flex:none; }
   .patio { width:100%; max-width:640px; display:grid; grid-template-columns:repeat(auto-fit,minmax(100px,1fr)); gap:12px; }
-  .vaga { background:var(--card); border-radius:14px; padding:20px 8px; text-align:center; border:2px solid transparent; transition:all .3s; }
-  .vaga .num { font-size:.8rem; color:var(--suave); margin-bottom:8px; }
-  .vaga .icone { font-size:2rem; margin-bottom:8px; }
-  .vaga .status { font-weight:600; font-size:.9rem; }
-  .vaga.livre { border-color:var(--livre); }
+  .vaga { position:relative; background:var(--superficie-2); border-radius:14px; padding:20px 8px; text-align:center; border:2px solid var(--vaga-ocupada); }
+  .vaga .num { font-size:.8rem; color:var(--texto-secundario); margin-bottom:8px; }
+  .vaga .status { font-weight:600; font-size:.9rem; color:var(--texto); }
+  .vaga.livre { background:var(--livre-fundo); border-color:var(--livre); }
   .vaga.livre .status { color:var(--livre); }
-  .vaga.ocupada { border-color:var(--ocupada); background:#2a1a1d; }
-  .vaga.ocupada .status { color:var(--ocupada); }
-  .detalhes { width:100%; max-width:640px; margin-top:28px; background:var(--card); border-radius:14px; padding:14px 16px; font-size:.9rem; }
+  .vaga .x { position:absolute; top:6px; right:6px; width:18px; height:18px; color:var(--texto); }
+  .detalhes { width:100%; max-width:640px; margin-top:28px; background:var(--superficie); border-radius:14px; padding:14px 16px; font-size:.9rem; }
   .detalhes h2 { font-size:1rem; font-weight:600; margin-bottom:8px; }
-  .detalhes h2 span { color:var(--suave); font-weight:400; }
-  .detalhes li { list-style:none; padding:3px 0; color:var(--suave); }
+  .detalhes h2 span { color:var(--texto-secundario); font-weight:400; }
+  .detalhes li { list-style:none; padding:3px 0; color:var(--texto-secundario); }
   .detalhes li b { color:var(--texto); font-weight:500; }
-  .rodape { margin-top:20px; color:var(--suave); font-size:.8rem; display:flex; align-items:center; gap:8px; }
+  .rodape { margin-top:20px; color:var(--texto-secundario); font-size:.8rem; display:flex; align-items:center; gap:8px; }
   .ponto { width:10px; height:10px; border-radius:50%; background:var(--livre); flex:none; }
   .ponto.sem-dados { background:var(--sem-dados); }
 </style>
@@ -468,12 +491,13 @@ const char PAGINA[] PROGMEM = R"rawliteral(
     detalhes.hidden = false;
   }
 
+  const X = '<svg class="x" viewBox="0 0 10 10" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M2 2l6 6M8 2l-6 6"/></svg>';
   function desenharVagas(d){
     patio.innerHTML='';
     d.vagas.forEach((ocupada,i)=>{
       const el=document.createElement('div');
       el.className='vaga '+(ocupada?'ocupada':'livre');
-      el.innerHTML='<div class="num">Vaga '+(i+1)+'</div><div class="icone" aria-hidden="true">'+(ocupada?'🚗':'🅿️')+'</div><div class="status">'+(ocupada?'Ocupada':'Livre')+'</div>';
+      el.innerHTML=(ocupada?X:'')+'<div class="num">Vaga '+(i+1)+'</div><div class="status">'+(ocupada?'Ocupada':'Livre')+'</div>';
       patio.appendChild(el);
     });
   }
@@ -497,9 +521,10 @@ const char PAGINA[] PROGMEM = R"rawliteral(
     const d = ultimoDado;
     texto(document.getElementById('titulo'), d.nome);
     if (document.title !== 'Placa do ' + d.nome) document.title = 'Placa do ' + d.nome;
-    texto(livresEl, String(d.livres));
-    texto(rotuloEl, d.livres === 1 ? 'vaga livre' : 'vagas livres');
-    classe(resumo, 'resumo' + (d.livres === 0 ? ' lotado' : ''));
+    const lotado = d.livres === 0;
+    texto(livresEl, lotado ? 'LOTADO' : String(d.livres));
+    texto(rotuloEl, lotado ? '0 de ' + d.vagas.length + ' livres' : d.livres === 1 ? 'vaga livre' : 'vagas livres');
+    classe(resumo, 'resumo' + (lotado ? ' lotado' : ''));
     if (d !== desenhado) { desenharVagas(d); desenharDetalhes(d); desenhado = d; }
     texto(detalhesIdade, '');
     const ok = d.envio === 'ok';

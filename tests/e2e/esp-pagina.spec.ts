@@ -286,3 +286,91 @@ test.describe("página local da placa: diagnóstico", () => {
     }
   });
 });
+
+/** Razão de contraste WCAG de cada texto visível contra o primeiro fundo opaco acima dele. */
+async function contrastes(page: Page): Promise<{ texto: string; razao: number; minimo: number; cor: string; fundo: string }[]> {
+  return page.evaluate(() => {
+    function canal(v: number) {
+      const c = v / 255;
+      return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+    }
+    function rgb(cor: string): [number, number, number, number] | null {
+      const m = cor.match(/rgba?\(([^)]+)\)/);
+      if (!m) return null;
+      const p = m[1].split(/[,/\s]+/).filter(Boolean).map(Number);
+      return [p[0], p[1], p[2], p.length > 3 ? p[3] : 1];
+    }
+    function lum([r, g, b]: number[]) {
+      return 0.2126 * canal(r) + 0.7152 * canal(g) + 0.0722 * canal(b);
+    }
+    function fundoDe(el: Element): [number, number, number, number] {
+      let atual: Element | null = el;
+      while (atual) {
+        const c = rgb(getComputedStyle(atual).backgroundColor);
+        if (c && c[3] > 0) return c;
+        atual = atual.parentElement;
+      }
+      return [255, 255, 255, 1];
+    }
+    const saida: { texto: string; razao: number; minimo: number; cor: string; fundo: string }[] = [];
+    const todos = document.body.querySelectorAll("*");
+    for (const el of todos) {
+      const direto = [...el.childNodes].filter((n) => n.nodeType === Node.TEXT_NODE && n.textContent!.trim()).map((n) => n.textContent!.trim()).join(" ");
+      if (!direto) continue;
+      const h = el as HTMLElement;
+      if (!h.checkVisibility()) continue;
+      const est = getComputedStyle(h);
+      const cor = rgb(est.color);
+      if (!cor) continue;
+      const fundo = fundoDe(h);
+      const l1 = lum(cor), l2 = lum(fundo);
+      const razao = (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05);
+      const px = parseFloat(est.fontSize);
+      const negrito = parseInt(est.fontWeight, 10) >= 700;
+      const minimo = px >= 24 || (negrito && px >= 18.66) ? 3 : 4.5;
+      saida.push({ texto: direto.slice(0, 40), razao: Math.round(razao * 100) / 100, minimo, cor: est.color, fundo: `rgb(${fundo.slice(0, 3).join(", ")})` });
+    }
+    return saida;
+  });
+}
+
+test.describe("página local da placa: cores e ícones do site", () => {
+  test("o HTML não tem emoji", () => {
+    expect(htmlDaPlaca()).not.toMatch(/\p{Extended_Pictographic}/u);
+  });
+
+  test("com 0 livres mostra LOTADO, sem o vermelho antigo nas vagas", async ({ page }) => {
+    const { contagem } = await abrirPagina(page, responderCom(status({ vagas: [true, true, true, true] })));
+    await expect(page.locator("#livres")).toHaveText("LOTADO");
+    await expect(page.locator("#rotulo")).toHaveText("0 de 4 livres");
+    await expect(page.locator("#resumo")).toHaveClass(/lotado/);
+    await expect(page.locator(".vaga.ocupada")).toHaveCount(4);
+    await expect(page.locator(".vaga.ocupada svg")).toHaveCount(4);
+    for (const vaga of await page.locator(".vaga").all()) {
+      for (const prop of ["border-top-color", "background-color", "color"]) {
+        expect(await vaga.evaluate((el, p) => getComputedStyle(el).getPropertyValue(p), prop)).not.toBe("rgb(239, 68, 68)");
+      }
+    }
+    expect(contagem.foraDaPlaca).toBe(0);
+  });
+
+  test("todo texto visível tem contraste de 4,5:1 (3:1 nos grandes), nos três estados", async ({ page }) => {
+    const ruins = (lista: Awaited<ReturnType<typeof contrastes>>) => {
+      expect(lista.length).toBeGreaterThan(6);
+      return lista.filter((c) => c.razao < c.minimo);
+    };
+    const { trocarResposta, contagem } = await abrirPagina(page, pendurar);
+    expect(ruins(await contrastes(page))).toEqual([]);
+
+    trocarResposta(responderCom(status({ envio: "token" })));
+    await page.clock.runFor(4000);
+    await expect(page.locator("#livres")).toHaveText("3");
+    expect(ruins(await contrastes(page))).toEqual([]);
+
+    trocarResposta(responderCom(status({ vagas: [true, true, true] })));
+    await page.clock.runFor(2000);
+    await expect(page.locator("#livres")).toHaveText("LOTADO");
+    expect(ruins(await contrastes(page))).toEqual([]);
+    expect(contagem.foraDaPlaca).toBe(0);
+  });
+});
