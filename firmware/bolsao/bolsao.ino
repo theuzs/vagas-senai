@@ -171,7 +171,8 @@ void publicar() {
 
   String url = String(SUPABASE_URL) + "/rest/v1/rpc/publicar";
   http.setReuse(true);     // mantém a conexão TLS aberta entre envios
-  http.setTimeout(5000);
+  http.setConnectTimeout(4000);   // conexão TCP
+  http.setTimeout(5000);          // resposta. O pior envio preso fica perto de 15 s.
   if (!http.begin(tls, url)) {
     Serial.println("[http] begin falhou");
     return;
@@ -304,6 +305,9 @@ void setup() {
   // Protótipo: aceita qualquer certificado. Na versão final, troque por:
   //   tls.setCACertBundle(x509_crt_imported_bundle_bin_start);   // pacote de raízes do core
   tls.setInsecure();
+  // O handshake do TLS esperaria 120 s. Com 6 s, um portal que aceita a porta 443 e não
+  // fala TLS não segura o loop até o watchdog (30 s) reiniciar a placa.
+  tls.setHandshakeTimeout(6);
 
 #if MANTER_PAGINA_LOCAL
   WiFi.mode(WIFI_AP_STA);
@@ -342,8 +346,8 @@ void loop() {
     lerVagas();
   }
 
-  // O POST pode segurar o loop por até 5 s (timeout). A leitura dos sensores
-  // pausa nesse tempo; com o filtro de 3 leituras isso não muda nenhum estado.
+  // O POST pode segurar o loop por até 15 s (4 s de conexão, 6 s de TLS e 5 s de resposta).
+  // A leitura dos sensores pausa nesse tempo; com o filtro de 3 leituras isso não muda nenhum estado.
   if (erroConfig.length() > 0) {
     if (ultimoAvisoConfig == 0 || agora - ultimoAvisoConfig >= 10000) {
       ultimoAvisoConfig = agora;
