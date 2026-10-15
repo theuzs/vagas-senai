@@ -31,7 +31,7 @@ ESP32 do bolsão (sensores + Wi-Fi do campus) ──HTTPS a cada 10 s──► S
    [http] ok, 3 de 5 livres, 180 ms, sinal -61 dBm
    ```
    A linha `[http] ok` repete a cada 10 s. A primeira leva uns 2 s a mais por causa do TLS. Se aparecer outra coisa, procure a mensagem na tabela "Se der erro".
-9. No celular, entre na rede `Estacionamento-A` (senha `vagas1234`) e abra `http://192.168.4.1`. A página mostra a faixa de diagnóstico, o número de vagas livres, a grade e os detalhes da placa. Enquanto a placa procura o Wi-Fi do campus, o celular pode cair da rede `Estacionamento-A`; basta entrar de novo.
+9. Entre na rede Estacionamento-A (senha vagas1234). O celular abre a página da placa sozinho. Se não abrir, desligue os dados móveis e abra http://192.168.4.1. No iPhone, use a página dentro da janela que abrir. Se você tocar em Cancelar, o iPhone sai da rede da placa. A página mostra a faixa de diagnóstico, o número de vagas livres, a grade e os detalhes da placa. Enquanto a placa procura o Wi-Fi do campus, o celular pode cair da rede Estacionamento-A; basta entrar de novo.
 10. Tampe cada sensor, um por vez, e confira na página que a vaga certa muda para "Ocupada". A célula que mudou ganha um contorno branco por 5 s. O monitor serial mostra `[vaga] 3 (GPIO 34) ocupada`.
 11. Abra `https://vagas.rubysistemas.com.br` e veja o bloco sair de SEM DADOS em até 10 s.
 12. Anote quais vagas são de PCD e de idoso, pelo número que a página mostra, e mande para o Matheus.

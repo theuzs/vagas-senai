@@ -79,7 +79,9 @@ unsigned long ultimoAvisoFalta = 0;
 WiFiClientSecure tls;
 HTTPClient http;
 #if MANTER_PAGINA_LOCAL
+#include <DNSServer.h>
 WebServer server(80);
+DNSServer dns;   // responde todo nome com 192.168.4.1: o celular abre a página sozinho
 #endif
 
 // ---------------- sensores (igual ao original) ----------------
@@ -598,8 +600,17 @@ void setup() {
 #if MANTER_PAGINA_LOCAL
   WiFi.mode(WIFI_AP_STA);
   WiFi.softAP(AP_SSID, AP_SENHA);
+  // Portal cativo: o DHCP avisa o celular e o DNS responde tudo com o IP da placa.
+  // Qualquer endereço desconhecido redireciona para a página, inclusive os testes de
+  // conectividade do Android e do iPhone.
+  WiFi.AP.enableDhcpCaptivePortal();
+  dns.start();
   server.on("/", paginaInicial);
   server.on("/status", statusJson);
+  server.onNotFound([]() {
+    server.sendHeader("Location", "http://192.168.4.1/");
+    server.send(302, "text/plain", "");
+  });
   server.begin();
 #else
   WiFi.mode(WIFI_STA);
