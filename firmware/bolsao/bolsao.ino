@@ -15,8 +15,7 @@
 // ================= CONFIGURAÇÃO (muda por bolsão) =================
 const char* ID_BOLSAO   = "A";            // "A", "C" ou "H" (tem que existir em vagas.bolsoes)
 const char* NOME_BOLSAO = "Bloco A";
-const int   N_VAGAS     = 5;
-const int   PINO_VAGA[N_VAGAS] = {32, 33, 34, 35, 25};
+const int   PINO_VAGA[] = {32, 33, 34, 35, 25};   // um pino por vaga, na ordem das vagas
 
 // Wi-Fi do campus. Rede com usuário e senha (WPA2-Enterprise): preencha WIFI_USUARIO.
 // Rede só com senha: deixe WIFI_USUARIO = "".
@@ -42,12 +41,18 @@ const char* AP_SENHA = "vagas1234";       // mínimo 8 caracteres
 // Data da última mudança deste arquivo. Aparece no monitor serial e na página local.
 const char* VERSAO_FIRMWARE = "2026-10-15";
 
+// Uma vaga por pino listado. Não há número para conferir: a lista é a configuração.
+const int N_VAGAS = sizeof(PINO_VAGA) / sizeof(PINO_VAGA[0]);
+
 bool estado[N_VAGAS]   = {false};
 int  contagem[N_VAGAS] = {0};
 unsigned long ultimaLeitura = 0;
 unsigned long ultimoEnvio   = 0;
 unsigned long ultimoEnvioOk = 0;
 bool  envioOk = false;
+// Erro de configuração que impede o envio (pino inválido). Vazio = tudo certo.
+String erroConfig = "";
+unsigned long ultimoAvisoConfig = 0;
 int   ultimoCodigoHttp = 0;
 unsigned long desconectadoDesde = 0;
 unsigned long proximaTentativaWifi = 0;
@@ -73,6 +78,34 @@ void lerVagas() {
     } else {
       contagem[i] = 0;
     }
+  }
+}
+
+// Confere PINO_VAGA na partida. Pino inexistente, da flash, da serial ou repetido
+// impede o envio: o site mostra SEM DADOS em vez de um número inventado.
+void conferirPinos() {
+  for (int i = 0; i < N_VAGAS; i++) {
+    int g = PINO_VAGA[i];
+    String motivo = "";
+    if (g < 0 || g == 20 || g == 24 || (g >= 28 && g <= 31) || g > 39) motivo = "que não existe no ESP32";
+    else if (g >= 6 && g <= 11) motivo = "que é da memória flash";
+    else if (g == 1 || g == 3) motivo = "que é da porta serial";
+    else {
+      for (int j = 0; j < i; j++) {
+        if (PINO_VAGA[j] == g) { motivo = "igual à vaga " + String(j + 1); break; }
+      }
+    }
+    if (motivo.length() > 0) {
+      if (erroConfig.length() == 0) {
+        erroConfig = "A vaga " + String(i + 1) + " usa o GPIO " + String(g) + ", " + motivo + ". Troque em PINO_VAGA.";
+      }
+      continue;
+    }
+    if (g == 0 || g == 2 || g == 5 || g == 12 || g == 15) {
+      Serial.print("[config] A vaga "); Serial.print(i + 1); Serial.print(" usa o GPIO "); Serial.print(g);
+      Serial.println(", que pode atrapalhar a partida da placa.");
+    }
+    pinMode(g, INPUT);
   }
 }
 
@@ -266,7 +299,7 @@ void statusJson() {
 
 void setup() {
   Serial.begin(115200);
-  for (int i = 0; i < N_VAGAS; i++) pinMode(PINO_VAGA[i], INPUT);
+  conferirPinos();
 
   // Protótipo: aceita qualquer certificado. Na versão final, troque por:
   //   tls.setCACertBundle(x509_crt_imported_bundle_bin_start);   // pacote de raízes do core
@@ -311,6 +344,13 @@ void loop() {
 
   // O POST pode segurar o loop por até 5 s (timeout). A leitura dos sensores
   // pausa nesse tempo; com o filtro de 3 leituras isso não muda nenhum estado.
+  if (erroConfig.length() > 0) {
+    if (ultimoAvisoConfig == 0 || agora - ultimoAvisoConfig >= 10000) {
+      ultimoAvisoConfig = agora;
+      Serial.print("[config] "); Serial.println(erroConfig);
+    }
+    return;   // sem envio: o site mostra SEM DADOS
+  }
   if (agora - ultimoEnvio >= INTERVALO_PUBLICAR_MS) {
     ultimoEnvio = agora;
     publicar();

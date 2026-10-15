@@ -11,7 +11,7 @@ ESP32 do bolsão (sensores + Wi-Fi do campus) ──HTTPS a cada 10 s──► S
 ## Gravar um bolsão
 
 1. Abra `bolsao/bolsao.ino` e preencha o bloco de configuração no topo:
-   - `ID_BOLSAO` ("A", "C" ou "H"), `NOME_BOLSAO`, `N_VAGAS` e os pinos;
+   - `ID_BOLSAO` ("A", "C" ou "H"), `NOME_BOLSAO` e `PINO_VAGA` (um pino por vaga, na ordem das vagas; a quantidade de vagas vem do tamanho da lista);
    - `WIFI_SSID`, `WIFI_SENHA` e, se a rede pedir usuário, `WIFI_USUARIO`;
    - `SUPABASE_URL` e `SUPABASE_ANON_KEY` (Project Settings → Data API e API Keys);
    - `TOKEN_CENTRAL`, de `npm run token:gerar -- bolsao-a "Bolsão A"` (um por bolsão).
