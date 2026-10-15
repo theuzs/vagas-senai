@@ -31,9 +31,9 @@ struct Bolsao {
   const char* idoso;
 };
 const Bolsao BOLSOES[] = {
-  {"A", "Bloco A", {32, 33, 25, -1, -1, -1, -1, -1}, "1", ""},
-  {"C", "Bloco C", {26, 27, 14, -1, -1, -1, -1, -1}, "", ""},
-  {"H", "Bloco H", {16, 17, 18, -1, -1, -1, -1, -1}, "", "1"},
+  {"A", "Bloco A", {32, 33, 25, 26, 27, -1, -1, -1}, "1", ""},
+  {"C", "Bloco C", {14, 13, 4, 16, 17, -1, -1, -1}, "", ""},
+  {"H", "Bloco H", {18, 19, 21, 22, 23, -1, -1, -1}, "", "1"},
 };
 
 // Wi-Fi. Rede com usuário e senha (WPA2-Enterprise): preencha WIFI_USUARIO.
