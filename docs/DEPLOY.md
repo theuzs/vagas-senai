@@ -81,6 +81,7 @@ A tela do vigia fica em `https://vagas.rubysistemas.com.br/guarita`.
 2. Para abrir sozinha ao ligar o PC: `Win+R`, digite `shell:startup` e copie o atalho para essa pasta.
 3. Em Configurações → Sistema → Energia, ponha "Desligar a tela" e "Suspender" em **Nunca**. A página também pede ao navegador para não apagar a tela, mas a configuração do Windows manda.
 4. Sem o modo quiosque, a página mostra um botão "Abrir em tela cheia".
+5. Imprima `https://vagas.rubysistemas.com.br/guarita/guia`, escreva o contato do responsável pelos sensores e cole ao lado do monitor.
 
 ## 8. QR code na guarita
 

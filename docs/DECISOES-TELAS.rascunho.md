@@ -14,3 +14,7 @@ Rascunho dos registros pedidos pelos itens UX-15, UX-18, UX-54, UX-56, UX-62 e U
 - **A folha do QR muda o texto da especificação 3.5.** O título "Tem vaga no A, no C ou no H?" era pergunta seguida da resposta. Agora a folha diz "Vagas livres agora / nos blocos A, C e H", "Com o carro parado, aponte a câmera do celular.", o endereço e um rodapé que explica o SEM DADOS e a tela inicial do celular. O QR passou de 110 mm, nível M, modo byte para 165 mm, nível H, modo alfanumérico (endereço em maiúsculas, versão 3), com margem de 4 módulos. A impressão sai em uma página A4, com esquema claro e margem de 12 mm. A folha já impressa precisa ser impressa de novo.
 - As três folhas impressas (`/qr`, `/qr/sala` e `/guarita/guia`) usam o mesmo componente `Folha` (`src/components/folha.tsx`), que traz o botão "Imprimir esta folha" e a dica de papel A4 só na tela, e o estilo de impressão.
 - O teste atual `tests/e2e/extras.spec.ts` ("/qr tem o QR code e o endereço") espera "Aponte a câmera" com A maiúsculo; o texto novo é "Com o carro parado, aponte a câmera do celular.". Quem mexe nesse arquivo troca a expectativa para `/aponte a câmera/i`.
+
+## UX-62: guia impresso do vigia
+
+- `/guarita/guia` é uma folha A4 com os quatro estados da tela (retângulo de 24 mm na cor e no padrão de cada um) e espaço para o nome e o telefone do responsável pelos sensores. A página fica fora dos buscadores (`robots: index false`) e não lê dado nenhum. O passo 5 da seção 7 do `DEPLOY.md` manda imprimir e colar ao lado do monitor.
