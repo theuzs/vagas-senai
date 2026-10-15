@@ -19,6 +19,8 @@ ESP32 do bolsão (sensores + Wi-Fi do campus) ──HTTPS a cada 10 s──► S
 2. Arduino IDE: placa "ESP32 Dev Module", grave. Ou `arduino-cli compile --fqbn esp32:esp32:esp32 firmware/bolsao` e `arduino-cli upload --fqbn esp32:esp32:esp32 -p COM5 firmware/bolsao`.
 3. Monitor serial em 115200. Esperado: `[wifi] conectado, IP ...` e depois `[http] ok, 3 livres, 180 ms` a cada 10 s (a primeira vez leva ~2 s por causa do TLS).
 
+Os arquivos prontos de cada placa ficam em `bolsao/placas/bolsao_X/bolsao_X.ino` (pasta ignorada pelo git). O Matheus gera esses arquivos com `npm run firmware:placas`, que lê o `bolsao.ino` e preenche o Supabase e o token de cada bolsão. Ao receber uma versão nova, copie do arquivo antigo para o novo as linhas de WIFI_SSID, WIFI_SENHA, WIFI_USUARIO e PINO_VAGA.
+
 Não faça commit do arquivo com o token ou a senha do Wi-Fi preenchidos.
 
 ## O que o monitor serial mostra

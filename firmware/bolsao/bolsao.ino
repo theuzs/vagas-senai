@@ -39,6 +39,9 @@ const char* AP_SSID  = "Estacionamento-A";
 const char* AP_SENHA = "vagas1234";       // mínimo 8 caracteres
 // ===================================================================
 
+// Data da última mudança deste arquivo. Aparece no monitor serial e na página local.
+const char* VERSAO_FIRMWARE = "2026-10-15";
+
 bool estado[N_VAGAS]   = {false};
 int  contagem[N_VAGAS] = {0};
 unsigned long ultimaLeitura = 0;
