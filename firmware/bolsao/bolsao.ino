@@ -21,6 +21,10 @@
 const char* ID_BOLSAO   = "A";            // "A", "C" ou "H" (tem que existir em vagas.bolsoes)
 const char* NOME_BOLSAO = "Bloco A";
 const int   PINO_VAGA[] = {32, 33, 34, 35, 25};   // um pino por vaga, na ordem das vagas
+// Vagas especiais, pelo número da vaga na página (1 = primeira de PINO_VAGA). Ex.: "1,2". Vazio = nenhuma.
+// A placa manda isso ao site a cada envio: o que estiver aqui vale, mesmo que alguém mude no banco.
+const char* VAGAS_PCD   = "";
+const char* VAGAS_IDOSO = "";
 
 // Wi-Fi do campus. Rede com usuário e senha (WPA2-Enterprise): preencha WIFI_USUARIO.
 // Rede só com senha: deixe WIFI_USUARIO = "".
@@ -62,6 +66,10 @@ unsigned long ultimoEnvioOk = 0;
 bool  envioOk = false;
 // Erro de configuração que impede o envio (pino inválido). Vazio = tudo certo.
 String erroConfig = "";
+// Tipo de cada vaga: 0 comum, 1 PCD, 2 idoso. Erro em VAGAS_PCD/VAGAS_IDOSO não impede o envio,
+// só deixa p_especiais de fora.
+int tipoVaga[N_VAGAS] = {0};
+String erroEspeciais = "";
 unsigned long ultimoAvisoConfig = 0;
 int   ultimoCodigoHttp = 0;
 // Resultado do último envio, classificado. Vai para o monitor serial e para o /status.
@@ -88,6 +96,18 @@ HTTPClient http;
 WebServer server(80);
 DNSServer dns;   // responde todo nome com 192.168.4.1: o celular abre a página sozinho
 #endif
+
+// Escapa aspas e barras para o JSON.
+String jsonTexto(const String& t) {
+  String r = "\"";
+  for (unsigned int i = 0; i < t.length(); i++) {
+    char c = t[i];
+    if (c == '"' || c == '\\') r += '\\';
+    r += c;
+  }
+  r += "\"";
+  return r;
+}
 
 // ---------------- sensores (igual ao original) ----------------
 
@@ -147,6 +167,61 @@ void fecharMinuto() {
     }
     trocas[i] = 0;
   }
+}
+
+// Lê "1,2,7" de VAGAS_PCD ou VAGAS_IDOSO e marca tipoVaga. Guarda o primeiro erro em erroEspeciais.
+void lerEspeciais(const char* nome, const char* lista, int tipo) {
+  String texto = String(lista);
+  int inicio = 0;
+  while (inicio <= (int)texto.length() && erroEspeciais.length() == 0) {
+    int fim = texto.indexOf(',', inicio);
+    if (fim < 0) fim = texto.length();
+    String item = texto.substring(inicio, fim);
+    item.trim();
+    inicio = fim + 1;
+    if (item.length() == 0) continue;
+    bool numero = true;
+    for (unsigned int i = 0; i < item.length(); i++) if (!isDigit(item[i])) numero = false;
+    if (!numero) { erroEspeciais = String(nome) + " tem um valor que não é número: " + item; break; }
+    int n = item.toInt();
+    if (n < 1 || n > N_VAGAS) { erroEspeciais = String(nome) + " tem a vaga " + String(n) + ", mas N_VAGAS é " + String(N_VAGAS); break; }
+    if (tipoVaga[n - 1] == tipo) { erroEspeciais = String(nome) + " repete a vaga " + String(n); break; }
+    if (tipoVaga[n - 1] != 0) { erroEspeciais = "A vaga " + String(n) + " está em VAGAS_PCD e em VAGAS_IDOSO"; break; }
+    tipoVaga[n - 1] = tipo;
+  }
+}
+
+void conferirEspeciais() {
+  lerEspeciais("VAGAS_PCD", VAGAS_PCD, 1);
+  lerEspeciais("VAGAS_IDOSO", VAGAS_IDOSO, 2);
+  if (erroEspeciais.length() > 0) {
+    for (int i = 0; i < N_VAGAS; i++) tipoVaga[i] = 0;
+  }
+}
+
+// {"pcd":[0,1],"idoso":[3]} com posições a partir de 0, como o banco guarda.
+String jsonEspeciais() {
+  String s = "{";
+  const char* nomes[] = {"pcd", "idoso"};
+  bool primeiroTipo = true;
+  for (int tipo = 1; tipo <= 2; tipo++) {
+    bool tem = false;
+    for (int i = 0; i < N_VAGAS; i++) if (tipoVaga[i] == tipo) tem = true;
+    if (!tem) continue;
+    if (!primeiroTipo) s += ",";
+    primeiroTipo = false;
+    s += "\""; s += nomes[tipo - 1]; s += "\":[";
+    bool primeiro = true;
+    for (int i = 0; i < N_VAGAS; i++) {
+      if (tipoVaga[i] != tipo) continue;
+      if (!primeiro) s += ",";
+      primeiro = false;
+      s += String(i);
+    }
+    s += "]";
+  }
+  s += "}";
+  return s;
 }
 
 int contarLivres() {
@@ -267,6 +342,38 @@ bool temValorDeExemplo() {
 // ---------------- Supabase ----------------
 
 // {"p_token":"...","p_bolsoes":{"A":"01001"}}   0 = livre, 1 = ocupada
+// Motivo do reinício em uma palavra, para a tela /placas.
+String reinicioCurto() {
+  switch (esp_reset_reason()) {
+    case ESP_RST_POWERON: return "energia";
+    case ESP_RST_BROWNOUT: return "queda de tensão";
+    case ESP_RST_TASK_WDT: case ESP_RST_INT_WDT: case ESP_RST_WDT: return "watchdog";
+    case ESP_RST_PANIC: return "erro no programa";
+    case ESP_RST_SW: return "programa";
+    default: return "código " + String((int)esp_reset_reason());
+  }
+}
+
+// Diagnóstico que vai junto com as vagas: sinal, tempo ligada, reinício, versão e,
+// por sensor, há quantas horas ele não muda (desde a partida, se nunca mudou).
+String jsonDiag() {
+  unsigned long agora = millis();
+  String s = "{\"rssi\":" + String(WiFi.RSSI());
+  s += ",\"uptime_s\":" + String(agora / 1000);
+  s += ",\"reinicio\":" + jsonTexto(reinicioCurto());
+  s += ",\"versao\":" + jsonTexto(VERSAO_FIRMWARE);
+  s += ",\"sem_mudar_h\":[";
+  for (int i = 0; i < N_VAGAS; i++) {
+    unsigned long desde = mudouEm[i] == 0 ? agora : agora - mudouEm[i];
+    s += String(desde / 3600000UL);
+    if (i < N_VAGAS - 1) s += ",";
+  }
+  s += "]}";
+  return s;
+}
+
+// {"p_token":"...","p_bolsoes":{"A":"01001"},"p_diag":{...},"p_especiais":{"A":{"pcd":[0,1]}}}
+// 0 = livre, 1 = ocupada. p_especiais só vai quando VAGAS_PCD e VAGAS_IDOSO estão certos.
 String montarPayload() {
   String s = "{\"p_token\":\"";
   s += TOKEN_CENTRAL;
@@ -274,7 +381,13 @@ String montarPayload() {
   s += ID_BOLSAO;
   s += "\":\"";
   for (int i = 0; i < N_VAGAS; i++) s += estado[i] ? '1' : '0';
-  s += "\"}}";
+  s += "\"},\"p_diag\":" + jsonDiag();
+  if (erroEspeciais.length() == 0) {
+    s += ",\"p_especiais\":{\"";
+    s += ID_BOLSAO;
+    s += "\":" + jsonEspeciais() + "}";
+  }
+  s += "}";
   return s;
 }
 
@@ -404,6 +517,7 @@ const char PAGINA[] PROGMEM = R"rawliteral(
   .patio { width:100%; max-width:640px; display:grid; grid-template-columns:repeat(auto-fill,minmax(64px,1fr)); gap:8px; }
   .vaga { position:relative; background:var(--superficie-2); border-radius:10px; padding:8px 4px; text-align:center; border:2px solid var(--vaga-ocupada); }
   .vaga .num { font-size:1rem; font-weight:700; line-height:1.2; color:var(--texto); }
+  .vaga .num small { display:block; font-size:.7rem; font-weight:600; color:var(--vaga-especial); }
   .vaga .gpio { font-size:.7rem; color:var(--texto-secundario); margin:2px 0; white-space:nowrap; }
   .vaga .status { font-weight:600; font-size:.75rem; color:var(--texto); white-space:nowrap; }
   .vaga .extra { font-size:.65rem; font-weight:600; margin-top:2px; white-space:nowrap; }
@@ -426,7 +540,7 @@ const char PAGINA[] PROGMEM = R"rawliteral(
 </head>
 <body>
   <header><h1 id="titulo">Placa do estacionamento</h1><p>Página local da placa. Os motoristas usam vagas.rubysistemas.com.br.</p></header>
-  <div class="faixa" id="faixa" aria-live="polite"><svg class="icone-faixa" id="faixa-icone" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 2.5 20h19L12 3Z"/><path d="M12 9v5"/><path d="M12 17.5h.01"/></svg><div><p id="faixa-texto">A página ainda não recebeu dados da placa.</p><p id="faixa-extra" hidden></p><p id="faixa-vaga" hidden></p></div></div>
+  <div class="faixa" id="faixa" aria-live="polite"><svg class="icone-faixa" id="faixa-icone" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 2.5 20h19L12 3Z"/><path d="M12 9v5"/><path d="M12 17.5h.01"/></svg><div><p id="faixa-texto">A página ainda não recebeu dados da placa.</p><p id="faixa-extra" hidden></p><p id="faixa-vaga" hidden></p><p id="faixa-config" hidden></p></div></div>
   <div class="resumo sem-dados" id="resumo">
     <div class="numero" id="livres"><svg class="alerta" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 2.5 20h19L12 3Z"/><path d="M12 9v5"/><path d="M12 17.5h.01"/></svg><span>SEM DADOS</span></div>
     <div class="rotulo" id="rotulo">A página ainda não recebeu dados da placa.</div>
@@ -444,7 +558,7 @@ const char PAGINA[] PROGMEM = R"rawliteral(
   const ICONE_ALERTA = '<svg class="alerta" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">' + ALERTA + '</svg>';
   const patio=document.getElementById('patio'),resumo=document.getElementById('resumo'),ponto=document.getElementById('ponto');
   const livresEl=document.getElementById('livres'),rotuloEl=document.getElementById('rotulo'),atualizadoEl=document.getElementById('atualizado');
-  const faixa=document.getElementById('faixa'),faixaTexto=document.getElementById('faixa-texto'),faixaExtra=document.getElementById('faixa-extra'),faixaIcone=document.getElementById('faixa-icone'),faixaVaga=document.getElementById('faixa-vaga');
+  const faixa=document.getElementById('faixa'),faixaTexto=document.getElementById('faixa-texto'),faixaExtra=document.getElementById('faixa-extra'),faixaIcone=document.getElementById('faixa-icone'),faixaVaga=document.getElementById('faixa-vaga'),faixaConfig=document.getElementById('faixa-config');
   const LIMITE_TROCAS_MIN = 12;
   const detalhes=document.getElementById('detalhes'),detalhesLista=document.getElementById('detalhes-lista'),detalhesIdade=document.getElementById('detalhes-idade');
   let ultimoDado=null, ultimoOk=null, falhou=false, desenhado=null;
@@ -497,13 +611,22 @@ const char PAGINA[] PROGMEM = R"rawliteral(
   }
 
   function linha(el, t){ if (t) { texto(el, t); el.hidden = false; } else { el.hidden = true; texto(el, ''); } }
-  function mostrarFaixa(ok, principal, extra, vaga){
+  function mostrarFaixa(ok, principal, extra, vaga, config){
     classe(faixa, 'faixa' + (ok ? ' ok' : ''));
     const icone = ok ? CERTO : ALERTA;
     if (faixaIcone.innerHTML !== icone) faixaIcone.innerHTML = icone;
     texto(faixaTexto, principal);
     linha(faixaExtra, extra);
     linha(faixaVaga, vaga);
+    linha(faixaConfig, config);
+  }
+
+  // "PCD" ou "Idoso" para a vaga i, pelo campo especiais do /status.
+  function tipoDaVaga(d, i){
+    const e = d.especiais || {};
+    if (e.pcd && e.pcd.indexOf(i) >= 0) return 'PCD';
+    if (e.idoso && e.idoso.indexOf(i) >= 0) return 'Idoso';
+    return '';
   }
 
   // Primeira vaga instável do minuto, para a faixa.
@@ -540,7 +663,8 @@ const char PAGINA[] PROGMEM = R"rawliteral(
       const el=document.createElement('div');
       el.className='vaga '+(ocupada?'ocupada':'livre')+(mudou?' mudou':'')+(instavel?' instavel':'');
       const extra = instavel ? 'instável' : mudou ? 'mudou agora' : '';
-      el.innerHTML=(ocupada?X:'')+'<div class="num">Vaga '+(i+1)+'</div><div class="gpio">GPIO '+(d.pinos ? d.pinos[i] : '?')+'</div><div class="status">'+(ocupada?'Ocupada':'Livre')+'</div>'+(extra?'<div class="extra">'+extra+'</div>':'');
+      const tipo = tipoDaVaga(d, i);
+      el.innerHTML=(ocupada?X:'')+'<div class="num">Vaga '+(i+1)+(tipo?' <small>('+tipo+')</small>':'')+'</div><div class="gpio">GPIO '+(d.pinos ? d.pinos[i] : '?')+'</div><div class="status">'+(ocupada?'Ocupada':'Livre')+'</div>'+(extra?'<div class="extra">'+extra+'</div>':'');
       patio.appendChild(el);
     });
   }
@@ -557,7 +681,7 @@ const char PAGINA[] PROGMEM = R"rawliteral(
       patio.innerHTML = ''; desenhado = null;
       classe(ponto, 'ponto sem-dados');
       texto(atualizadoEl, semResposta);
-      mostrarFaixa(false, semResposta, null, null);
+      mostrarFaixa(false, semResposta, null, null, null);
       if (ultimoDado) texto(detalhesIdade, '(dados de ' + s + ' s atrás)');
       return;
     }
@@ -571,7 +695,7 @@ const char PAGINA[] PROGMEM = R"rawliteral(
     if (d !== desenhado) { desenharVagas(d); desenharDetalhes(d); desenhado = d; }
     texto(detalhesIdade, '');
     const ok = d.envio === 'ok';
-    mostrarFaixa(ok, textoFaixa(d), ok ? null : 'Enquanto isso, o site mostra SEM DADOS para o ' + d.nome + '.', avisoInstavel(d));
+    mostrarFaixa(ok, textoFaixa(d), ok ? null : 'Enquanto isso, o site mostra SEM DADOS para o ' + d.nome + '.', avisoInstavel(d), d.aviso_config ? d.aviso_config + '. O site fica sem as vagas especiais desta placa.' : null);
     classe(ponto, 'ponto' + (falhou ? ' sem-dados' : ''));
     texto(atualizadoEl, falhou ? semResposta : 'A página consulta a placa a cada segundo.');
   }
@@ -604,18 +728,6 @@ const char* textoEnvio() {
   }
 }
 
-// Escapa aspas e barras para o JSON.
-String jsonTexto(const String& t) {
-  String r = "\"";
-  for (unsigned int i = 0; i < t.length(); i++) {
-    char c = t[i];
-    if (c == '"' || c == '\\') r += '\\';
-    r += c;
-  }
-  r += "\"";
-  return r;
-}
-
 // Senha, token e chave nunca entram aqui.
 void statusJson() {
   bool wifi = WiFi.status() == WL_CONNECTED;
@@ -641,6 +753,8 @@ void statusJson() {
   json += ",\"reinicio\":" + jsonTexto(textoReinicio);
   json += ",\"versao\":" + jsonTexto(VERSAO_FIRMWARE);
   json += ",\"config\":" + jsonTexto(erroConfig);
+  json += ",\"aviso_config\":" + jsonTexto(erroEspeciais);
+  json += ",\"especiais\":" + jsonEspeciais();
   json += ",\"pinos\":[";
   for (int i = 0; i < N_VAGAS; i++) {
     json += String(PINO_VAGA[i]);
@@ -667,6 +781,7 @@ void statusJson() {
 void setup() {
   Serial.begin(115200);
   conferirPinos();
+  conferirEspeciais();
 
   // Protótipo: aceita qualquer certificado. Na versão final, troque por:
   //   tls.setCACertBundle(x509_crt_imported_bundle_bin_start);   // pacote de raízes do core
@@ -705,6 +820,7 @@ void setup() {
   for (int i = 0; i < N_VAGAS; i++) { Serial.print(" "); Serial.print(i + 1); Serial.print("=GPIO"); Serial.print(PINO_VAGA[i]); }
   Serial.println();
   if (erroConfig.length() > 0) { Serial.print("[config] "); Serial.println(erroConfig); }
+  if (erroEspeciais.length() > 0) { Serial.print("[config] "); Serial.println(erroEspeciais); }
 #if MANTER_PAGINA_LOCAL
   Serial.print("[local] rede "); Serial.print(AP_SSID); Serial.print(", senha "); Serial.print(AP_SENHA);
   Serial.print(", página http://"); Serial.println(WiFi.softAPIP());

@@ -44,6 +44,8 @@ export interface StatusPlaca {
   pinos: number[];
   mudou_ha: number[];
   trocas_min: number[];
+  aviso_config: string;
+  especiais: Record<string, number[]>;
   [campo: string]: unknown;
 }
 
@@ -71,6 +73,8 @@ export function status(extra: Partial<StatusPlaca> = {}): StatusPlaca {
     pinos: vagas.map((_, i) => 32 + i),
     mudou_ha: vagas.map(() => -1),
     trocas_min: vagas.map(() => 0),
+    aviso_config: "",
+    especiais: {},
     ...extra,
   };
 }
@@ -438,5 +442,22 @@ test.describe("página local da placa: grade para testar os sensores", () => {
     await expect(page.locator(".vaga.instavel")).toHaveCount(0);
     await expect(page.locator("#patio")).not.toContainText("instável");
     await expect(page.locator("#faixa-vaga")).toBeHidden();
+  });
+});
+
+test.describe("página local da placa: vagas especiais", () => {
+  test("mostra o tipo da vaga e o aviso de VAGAS_PCD errado", async ({ page }) => {
+    const { trocarResposta } = await abrirPagina(page, responderCom(status({ especiais: { pcd: [0, 1], idoso: [3] } })));
+    await expect(page.locator(".vaga").nth(0)).toContainText("Vaga 1 (PCD)");
+    await expect(page.locator(".vaga").nth(1)).toContainText("Vaga 2 (PCD)");
+    await expect(page.locator(".vaga").nth(3)).toContainText("Vaga 4 (Idoso)");
+    await expect(page.locator(".vaga").nth(2)).not.toContainText("(");
+    await expect(page.locator("#faixa-config")).toBeHidden();
+
+    trocarResposta(responderCom(status({ aviso_config: "VAGAS_PCD tem a vaga 7, mas N_VAGAS é 5" })));
+    await page.clock.runFor(2000);
+    await expect(page.locator("#faixa-config")).toHaveText("VAGAS_PCD tem a vaga 7, mas N_VAGAS é 5. O site fica sem as vagas especiais desta placa.");
+    await expect(page.locator("#faixa-texto")).toContainText("A placa está enviando para o site.");
+    await expect(page.locator(".vaga").nth(0)).not.toContainText("(");
   });
 });

@@ -16,3 +16,9 @@ Registros dos itens de firmware de `docs/MELHORIAS-UX.md` (UX-20 a UX-27, UX-51 
 
 - **Pergunta para o João: existe bolsão com mais de 19 vagas?** Uma placa ESP32 Dev Module tem 19 pinos usáveis como entrada de sensor (15 normais e 4 só de entrada). Com mais vagas, é preciso uma segunda placa no mesmo bolsão ou um expansor de entradas, e o firmware ainda não trata nenhum dos dois.
 - O `bolsao.ino` para a compilação com uma mensagem em português quando a placa esp32 instalada é a 2.x (`#error` logo depois dos includes).
+
+## UX-58 · Diagnóstico remoto e vagas especiais definidas na placa (parte do firmware)
+
+- **A placa define as vagas especiais. Um update por SQL é sobrescrito no envio seguinte.** `VAGAS_PCD` e `VAGAS_IDOSO` ficam logo abaixo de `PINO_VAGA`, em numeração humana ("1,2"). A placa confere faixa e repetição na partida; com erro, imprime `[config] VAGAS_PCD tem a vaga 7, mas N_VAGAS é 5`, mostra o aviso na página local e não manda `p_especiais`. Sem erro, manda sempre `"p_especiais":{"A":{"pcd":[0,1]}}` (ou `{"A":{}}`), com posições a partir de 0, como o banco guarda.
+- **Desvio da especificação 2.2:** as posições de PCD e idoso deixam de ser cadastradas só no banco. A fonte passa a ser o arquivo da placa, porque mudar a ordem de `PINO_VAGA` deixaria o banco apontando para as vagas erradas.
+- **Diagnóstico no payload.** Cada envio leva `"p_diag":{"rssi":-67,"uptime_s":11520,"reinicio":"watchdog","versao":"2026-10-15","sem_mudar_h":[0,0,27,0,1]}`. `sem_mudar_h` conta as horas desde a última troca de cada sensor (desde a partida, se ele nunca trocou). `reinicio` vai curto: "energia", "queda de tensão", "watchdog", "erro no programa", "programa" ou "código N". A função `publicar` precisa aceitar `p_diag` e `p_especiais` com default null (migration do UX-58, fora deste rascunho).
