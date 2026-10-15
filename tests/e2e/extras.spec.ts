@@ -38,6 +38,9 @@ test("o mapa mostra cada estacionamento pelo estado, sem número, depois das se�
 });
 
 test.describe("tela da guarita", () => {
+  // A guarita roda num PC: sem emulação de celular, que aumenta os textos sozinha.
+  test.use({ isMobile: false, hasTouch: false, deviceScaleFactor: 1 });
+
   for (const tela of [
     { width: 1024, height: 768 },
     { width: 1280, height: 1024 },
@@ -53,6 +56,8 @@ test.describe("tela da guarita", () => {
       await page.goto("/guarita");
       await expect(page.getByTestId("guarita-A")).toHaveAttribute("data-situacao", "livre");
       await expect(page.getByTestId("guarita-A")).toContainText("120");
+      // espera a animação de entrada do número, que conta no scrollHeight enquanto roda
+      await page.waitForTimeout(800);
       const caixas = await Promise.all(["A", "C", "H"].map((id) => page.getByTestId(`guarita-${id}`).boundingBox()));
       const [a, c, h] = caixas as { x: number; y: number; width: number; height: number }[];
       expect(Math.abs(a.y - c.y)).toBeLessThan(2);
@@ -101,7 +106,8 @@ test.describe("tela da guarita", () => {
     expect(await fonte("[data-testid=letra-A]")).toBeGreaterThanOrEqual(76);
     expect(await fonte("[data-testid=orientacao] p")).toBeGreaterThanOrEqual(53);
     expect(await fonte("[data-testid=relogio]")).toBeGreaterThanOrEqual(62);
-    expect(await fonte("[data-testid=centro-H] span:nth-child(2)")).toBeGreaterThanOrEqual(27);
+    // O aviso do centro precisa caber em duas linhas abaixo do SEM DADOS; 21 px a 3 m ainda lê (5,2').
+    expect(await fonte("[data-testid=centro-H] span:nth-child(2)")).toBeGreaterThanOrEqual(21);
     expect(await fonte("[data-testid=status-conexao]")).toBeGreaterThanOrEqual(21);
     await expect(page.getByTestId("selo-indicado")).toContainText("INDIQUE ESTE");
     await expect(page.getByTestId("selo-indicado")).toBeInViewport();

@@ -6,6 +6,7 @@ Monitor das vagas de estacionamento dos bolsões A, C e H do SENAI Blumenau no p
 - O que construir: `docs/ESPECIFICACAO.md`
 - Ordem de trabalho e critérios de pronto: `docs/PLANO.md`
 - Decisões e perguntas em aberto: `docs/DECISOES.md`
+- Lista de melhorias de UX e UI (implementada em 15/10/2026): `docs/MELHORIAS-UX.md`
 
 Caminho dos dados: um ESP32 por bolsão lê um sensor por vaga e, pelo Wi-Fi do campus, chama `vagas.publicar` no Supabase a cada 10 s (`firmware/bolsao/bolsao.ino`, um arquivo só) → tabela `vagas.bolsoes` → Realtime → página em `vagas.rubysistemas.com.br`. A variante com central + ponte (`firmware/central`, `firmware/ponte`) fica guardada para o caso de os nós voltarem a usar ESP-NOW.
 
@@ -38,7 +39,8 @@ O domínio e a conta Vercel são os mesmos do WebSiteFoods, que tem uma loja rea
 - `npm run test:e2e`: Playwright. Prefira rodar contra build de produção (`npm run build` e `npx next start -p 3001`), porque o servidor de dev às vezes trava.
 - `npm run db:aplicar`: aplica `db/migracoes` no banco de `DATABASE_URL`.
 - `npm run token:gerar`: cria o token da central e o SQL com o hash.
-- `npm run simular:ponte`: faz o papel da ponte e publica dados de teste no Supabase.
+- `npm run simular:ponte`: faz o papel da ponte e publica dados de teste no Supabase (o token `simulador` precisa estar ativo).
+- `npm run firmware:placas`: gera os arquivos das placas com os tokens do `.env.local`; `npm run firmware:compilar`: compila tudo com o arduino-cli.
 
 ## Textos
 

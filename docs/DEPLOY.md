@@ -20,7 +20,7 @@ No seu computador, na pasta do projeto:
    A conexão direta (`db.hsfsejmhltkxiwniuunf.supabase.co`) só tem endereço IPv6 e não funciona em toda rede. Por isso a URL é a do pooler.
 2. Rode `npm run db:aplicar`.
 
-Deve aparecer `aplicada 0001_vagas.sql`. Rodar de novo mostra `ok 0001_vagas.sql` e não faz nada.
+Deve aparecer `aplicada` para cada arquivo de `db/migracoes` que ainda não rodou (hoje `0001_vagas.sql`, `0002_placas_maquete_aviso.sql` e `0003_resultados.sql`). Rodar de novo mostra `ok` e não faz nada.
 
 Se preferir não usar a URL do banco: abra o SQL Editor, cole o conteúdo de `db/migracoes/0001_vagas.sql` e execute. Depois rode também o SQL abaixo, que registra a migration como aplicada. Sem esse registro, um `npm run db:aplicar` no futuro tenta rodar a 0001 de novo e para com erro de tabela já existente.
 
@@ -75,12 +75,13 @@ A tela do vigia fica em `https://vagas.rubysistemas.com.br/guarita`.
 
 1. No PC da guarita, crie um atalho do Chrome com o destino:
    ```
-   "C:\Program Files\Google\Chrome\Application\chrome.exe" --kiosk --noerrdialogs --disable-session-crashed-bubble https://vagas.rubysistemas.com.br/guarita
+   "C:\Program Files\Google\Chrome\Application\chrome.exe" --kiosk --noerrdialogs --disable-session-crashed-bubble https://vagas.rubysistemas.com.br/guarita?quiosque=1
    ```
    O `--kiosk` abre em tela cheia, sem barra de endereço. Para sair, `Alt+F4`.
 2. Para abrir sozinha ao ligar o PC: `Win+R`, digite `shell:startup` e copie o atalho para essa pasta.
 3. Em Configurações → Sistema → Energia, ponha "Desligar a tela" e "Suspender" em **Nunca**. A página também pede ao navegador para não apagar a tela, mas a configuração do Windows manda.
-4. Sem o modo quiosque, a página mostra um botão "Abrir em tela cheia".
+4. Fora do modo quiosque e da tela cheia, a página mostra um botão "Abrir em tela cheia". O `?quiosque=1` esconde o botão. Para os avisos falados, acrescente `&som=1` ao endereço e `--autoplay-policy=no-user-gesture-required` ao atalho, com uma caixa de som ligada.
+5. A tela recarrega sozinha uma vez por dia às 17:30, se estiver aberta há mais de 1 h e o servidor responder. O código de "Versão" no canto diz qual build o PC roda.
 5. Imprima `https://vagas.rubysistemas.com.br/guarita/guia`, escreva o contato do responsável pelos sensores e cole ao lado do monitor.
 
 ## 8. QR code na guarita
@@ -100,13 +101,21 @@ select min(momento), count(*) from vagas.historico;
 delete from vagas.historico where momento < '2026-11-01 00:00-03';  -- troque pela data da instalação
 ```
 
+## 10. Maquete, placas e manutenção
+
+- **Maquete:** o arquivo preenchido está em `firmware/bolsao/placas/maquete/maquete.ino` (gerado a partir de `firmware/maquete/maquete.ino` com o `TOKEN_MAQUETE` do `.env.local`). Enquanto ela faz o papel dos três estacionamentos, o token `maquete` publica em A, C e H e os números aparecem no site. Quando as placas reais entrarem: `update vagas.centrais set bolsoes = '{M}' where id = 'maquete';` e troque os ids em `BOLSOES` para `M`; a maquete passa a aparecer só em `https://vagas.rubysistemas.com.br/?maquete=1`.
+- **Placas:** `https://vagas.rubysistemas.com.br/placas` mostra o último envio e o diagnóstico de cada placa (fora dos buscadores). Para gerar os arquivos das placas de novo: `npm run firmware:placas`; para compilar tudo: `npm run firmware:compilar`.
+- **Aviso da manutenção:** `update vagas.bolsoes set aviso = 'Sensor em conserto até sexta' where id = 'H';` aparece só enquanto o bloco está em SEM DADOS; `set aviso = null` tira.
+- **Acessos:** ligue o Web Analytics no projeto `vagas-senai` da Vercel (Analytics → Enable). A guarita, a demonstração e a maquete não contam.
+
 ## Se algo der errado
 
 | Sintoma | Causa provável |
 |---|---|
-| Página com "Configuração incompleta" | faltou variável na Vercel; confira o nome exato e faça redeploy |
-| Página com "não conseguiu ler os dados" | o schema `vagas` não está exposto (passo 1) ou a migration não rodou (passo 2) |
-| Status "Reconectando" o tempo todo | `vagas.bolsoes` não está na publicação Realtime; rode `alter publication supabase_realtime add table vagas.bolsoes;` |
+| Guarita com comportamento antigo | peça ao vigia o código de "Versão" no canto da tela e compare com o último commit. Se for diferente, peça para apertar Alt+F4 e abrir o atalho de novo. |
+| Página com "Fora do ar" e "erro de configuração" | faltou variável na Vercel; confira o nome exato e faça redeploy |
+| Página com "Sem conexão" o tempo todo | o schema `vagas` não está exposto (passo 1) ou a migration não rodou (passo 2) |
+| Números só mudam a cada 10 s (sem Realtime) | `vagas.bolsoes` não está na publicação Realtime; rode `alter publication supabase_realtime add table vagas.bolsoes;` |
 | Simulador ou ESP32 com 403 | token não bate: rode o SQL do `token:gerar` de novo e use o token novo |
 | Simulador ou ESP32 com 406 | schema não exposto (passo 1) |
 | Simulador ou ESP32 com 404 | a função `publicar` não existe: a migration não rodou (passo 2) |

@@ -183,8 +183,8 @@ function ColunaBolsao({
       <div data-testid={`meio-${bolsao.id}`} className="flex min-h-0 flex-1 flex-col items-center justify-center text-center">
         {semDados ? (
           <div data-testid={`centro-${bolsao.id}`} className="flex flex-col items-center">
-            <span className={`text-[clamp(2rem,5.5vw,6.5rem)] font-black leading-none ${v.cor}`}>SEM DADOS</span>
-            <span className="mt-[1.5vh] max-w-[22ch] text-balance text-g-rotulo font-semibold leading-snug">{avisoColunaSemDados(bolsao, agoraServidorMs, causa, carregou)}</span>
+            <span className={`text-[length:clamp(2rem,min(5.5vw,6.5vh),6.5rem)] font-black leading-none ${v.cor}`}>SEM DADOS</span>
+            <span className="mt-[1vh] max-w-[30ch] text-balance text-[length:clamp(0.9rem,1.6vw,2rem)] font-semibold leading-tight">{avisoColunaSemDados(bolsao, agoraServidorMs, causa, carregou)}</span>
             {bolsao.aviso && (
               <span data-testid={`aviso-manutencao-${bolsao.id}`} className="mt-[1vh] text-g-corpo font-semibold text-sem-dados">
                 Aviso da manutenção: {bolsao.aviso}
@@ -198,7 +198,7 @@ function ColunaBolsao({
             </span>
             <span className={`text-[clamp(1.1rem,2.2vw,2.6rem)] font-bold leading-tight ${v.cor}`}>{situacao === "lotado" ? "LOTADO" : livres === 1 ? "vaga livre" : "vagas livres"}</span>
             {dados.especiaisLivres > 0 && (
-              <span data-testid={`especiais-extra-${bolsao.id}`} className="text-g-corpo font-bold text-[var(--vaga-especial)]">
+              <span data-testid={`especiais-extra-${bolsao.id}`} className="text-g-corpo font-bold leading-none text-[var(--vaga-especial)]">
                 +{dados.especiaisLivres} {dados.especiaisLivres === 1 ? "especial" : "especiais"}
               </span>
             )}

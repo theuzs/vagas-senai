@@ -50,9 +50,18 @@ npm run token:gerar -- bolsao-a "Bolsão A"
 
 Mostra o token (vai para o topo do `bolsao.ino`) e um SQL com o hash (vai para o SQL Editor). Gere um por bolsão (`bolsao-a`, `bolsao-c`, `bolsao-h`): se um ESP32 for levado, só o token dele é trocado. O banco nunca guarda o token em texto. Para trocar, rode de novo: o antigo deixa de valer.
 
+## Telas
+
+- `/` página do motorista; `/?demo=1` demonstração com roteiro de 3 min; `/?maquete=1` só o bloco da maquete.
+- `/guarita` tela do PC da guarita (`?quiosque=1` esconde o botão de tela cheia, `&som=1` liga os avisos falados); `/guarita/guia` folha impressa para o vigia.
+- `/como-funciona` explica o sistema e leva a todas as telas; `/resultados` mostra as noites; `/placas` mostra a saúde das placas.
+- `/qr` folha A4 para a guarita; `/qr/sala` folha para salas.
+
+A lista de melhorias implementada está em `docs/MELHORIAS-UX.md`, com as decisões em `docs/DECISOES.md`.
+
 ## Firmware
 
-`firmware/bolsao/bolsao.ino` é o arquivo único de cada bolsão: leitura dos sensores (igual ao código original), página local opcional e envio para o Supabase. Preencha o bloco de configuração no topo (`ID_BOLSAO`, pinos, Wi-Fi, URL e chave anon, token) e grave um por bolsão. Não faça commit do arquivo com o token preenchido. Detalhes em `firmware/LEIAME.md`.
+`npm run firmware:placas` gera, a partir do `.env.local`, um arquivo preenchido por placa em `firmware/bolsao/placas/` (pasta ignorada pelo git), e `npm run firmware:compilar` compila tudo com o arduino-cli. `firmware/maquete/maquete.ino` é a versão de uma placa só para a maquete de demonstração. `firmware/bolsao/bolsao.ino` é o arquivo único de cada bolsão: leitura dos sensores (igual ao código original), página local opcional e envio para o Supabase. Preencha o bloco de configuração no topo (`ID_BOLSAO`, pinos, Wi-Fi, URL e chave anon, token) e grave um por bolsão. Não faça commit do arquivo com o token preenchido. Detalhes em `firmware/LEIAME.md`.
 
 ## Testar o caminho completo
 
