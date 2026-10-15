@@ -16,7 +16,9 @@
     "db:aplicar": "tsx scripts/db-aplicar.ts",
     "token:gerar": "tsx scripts/gerar-token.ts",
     "simular:ponte": "tsx scripts/simular-ponte.ts",
-    "icones": "tsx scripts/gerar-icones.ts"
+    "icones": "tsx scripts/gerar-icones.ts",
+    "firmware:placas": "tsx scripts/gerar-placas.ts",
+    "firmware:compilar": "tsx scripts/compilar-firmware.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "2.117.1",
