@@ -94,5 +94,6 @@ Abra `https://vagas.rubysistemas.com.br/qr` e imprima (a página já vem em A4).
 | Página com "não conseguiu ler os dados" | o schema `vagas` não está exposto (passo 1) ou a migration não rodou (passo 2) |
 | Status "Reconectando" o tempo todo | `vagas.bolsoes` não está na publicação Realtime; rode `alter publication supabase_realtime add table vagas.bolsoes;` |
 | Simulador ou ESP32 com 403 | token não bate: rode o SQL do `token:gerar` de novo e use o token novo |
-| Simulador ou ESP32 com 404 | schema não exposto (passo 1) |
+| Simulador ou ESP32 com 406 | schema não exposto (passo 1) |
+| Simulador ou ESP32 com 404 | a função `publicar` não existe: a migration não rodou (passo 2) |
 | Simulador ou ESP32 com 400 | payload inválido (ex.: `ID_BOLSAO` que não existe na tabela); a mensagem diz o motivo |

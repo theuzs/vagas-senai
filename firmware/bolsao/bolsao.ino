@@ -54,6 +54,9 @@ bool  envioOk = false;
 String erroConfig = "";
 unsigned long ultimoAvisoConfig = 0;
 int   ultimoCodigoHttp = 0;
+// Resultado do último envio, classificado. Vai para o monitor serial e para o /status.
+enum SituacaoEnvio { ENVIO_NENHUM, ENVIO_OK, ENVIO_CHAVE, ENVIO_TOKEN, ENVIO_DADOS, ENVIO_FUNCAO, ENVIO_SCHEMA, ENVIO_PORTAL, ENVIO_SEM_INTERNET, ENVIO_OUTRO };
+SituacaoEnvio situacaoEnvio = ENVIO_NENHUM;
 unsigned long desconectadoDesde = 0;
 unsigned long proximaTentativaWifi = 0;
 unsigned long esperaWifi = 30000;
@@ -166,6 +169,14 @@ String montarPayload() {
   return s;
 }
 
+// Texto para os códigos negativos do HTTPClient.
+String textoErroRede(int codigo) {
+  if (codigo == HTTPC_ERROR_CONNECTION_REFUSED) return "não conectou";
+  if (codigo == HTTPC_ERROR_CONNECTION_LOST) return "a conexão caiu";
+  if (codigo == HTTPC_ERROR_READ_TIMEOUT) return "demorou demais para responder";
+  return "erro " + String(codigo);
+}
+
 void publicar() {
   if (WiFi.status() != WL_CONNECTED) return;
 
@@ -184,23 +195,45 @@ void publicar() {
 
   unsigned long t0 = millis();
   int codigo = http.POST(montarPayload());
+  String corpo = http.getString();
+  http.end();
   ultimoCodigoHttp = codigo;
-  if (codigo == 200) {
+  envioOk = false;
+
+  // Sucesso só com 200 e o corpo da função publicar. Um portal cativo também responde 200,
+  // e o TLS aceita qualquer certificado, então o código sozinho não basta.
+  if (codigo == 200 && corpo.indexOf("\"atualizados\"") >= 0) {
+    situacaoEnvio = ENVIO_OK;
     envioOk = true;
     ultimoEnvioOk = millis();
-    Serial.print("[http] ok, "); Serial.print(contarLivres()); Serial.print(" livres, ");
-    Serial.print(millis() - t0); Serial.println(" ms");
-  } else if (codigo == 401 || codigo == 403) {
-    envioOk = false;
-    Serial.print("[http] token recusado ("); Serial.print(codigo); Serial.println("): confira TOKEN_CENTRAL e vagas.centrais");
-  } else if (codigo > 0) {
-    envioOk = false;
-    Serial.print("[http] erro "); Serial.print(codigo); Serial.print(": "); Serial.println(http.getString());
+    Serial.print("[http] ok, "); Serial.print(contarLivres()); Serial.print(" de "); Serial.print(N_VAGAS); Serial.print(" livres, ");
+    Serial.print(millis() - t0); Serial.print(" ms, sinal "); Serial.print(WiFi.RSSI()); Serial.println(" dBm");
+  } else if (codigo == 200 || (codigo >= 300 && codigo <= 399)) {
+    situacaoEnvio = ENVIO_PORTAL;
+    Serial.print("[http] a rede respondeu no lugar do Supabase ("); Serial.print(codigo);
+    Serial.print("). Isso acontece quando ela pede login no navegador. Peça à TI para liberar o MAC "); Serial.print(WiFi.macAddress()); Serial.println(".");
+  } else if (codigo == 401) {
+    situacaoEnvio = ENVIO_CHAVE;
+    Serial.println("[http] chave recusada (401). A SUPABASE_ANON_KEY deste arquivo está errada. Peça ao Matheus um arquivo novo.");
+  } else if (codigo == 403) {
+    situacaoEnvio = ENVIO_TOKEN;
+    Serial.println("[http] token recusado (403). Avise o Matheus: o token deste arquivo foi trocado ou desligado.");
+  } else if (codigo == 400) {
+    situacaoEnvio = ENVIO_DADOS;
+    Serial.print("[http] dados recusados (400): "); Serial.println(corpo);
+  } else if (codigo == 404) {
+    situacaoEnvio = ENVIO_FUNCAO;
+    Serial.println("[http] o Supabase não achou a função publicar (404). Avise o Matheus.");
+  } else if (codigo == 406) {
+    situacaoEnvio = ENVIO_SCHEMA;
+    Serial.println("[http] o schema vagas não está liberado na API (406). Avise o Matheus.");
+  } else if (codigo < 0) {
+    situacaoEnvio = ENVIO_SEM_INTERNET;
+    Serial.print("[http] sem resposta do Supabase ("); Serial.print(textoErroRede(codigo)); Serial.println("). Confira se a rede tem internet.");
   } else {
-    envioOk = false;
-    Serial.print("[http] falha de rede: "); Serial.println(HTTPClient::errorToString(codigo));
+    situacaoEnvio = ENVIO_OUTRO;
+    Serial.print("[http] erro "); Serial.print(codigo); Serial.print(": "); Serial.println(corpo.substring(0, 120));
   }
-  http.end();
 }
 
 // ---------------- página local (opcional) ----------------

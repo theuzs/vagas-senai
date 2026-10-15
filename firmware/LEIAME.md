@@ -27,7 +27,8 @@ Não faça commit do arquivo com o token ou a senha do Wi-Fi preenchidos.
 
 - `[http] token recusado (403)`: o token não bate com `vagas.centrais`, ou a central está com `ativa = false`.
 - `[http] erro 400 ...`: o banco recusou o payload. Quase sempre `ID_BOLSAO` que não existe na tabela.
-- `[http] erro 404`: o schema `vagas` não está exposto na API do Supabase.
+- `[http] o schema vagas não está liberado na API (406)`: o schema `vagas` não está exposto na API do Supabase.
+- `[http] o Supabase não achou a função publicar (404)`: a migration não rodou no banco.
 - `[http] falha de rede`: sem resposta. Tenta de novo no próximo ciclo.
 - `[wifi] sem conexão há N s, tentando de novo`: refaz a conexão com espera crescente (30 s, 1, 2, 4, 5 min).
 
