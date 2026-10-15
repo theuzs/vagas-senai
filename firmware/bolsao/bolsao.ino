@@ -11,6 +11,7 @@
 #include <HTTPClient.h>
 #include <WebServer.h>
 #include <esp_task_wdt.h>
+#include <esp_system.h>
 
 // ================= CONFIGURAÇÃO (muda por bolsão) =================
 const char* ID_BOLSAO   = "A";            // "A", "C" ou "H" (tem que existir em vagas.bolsoes)
@@ -60,6 +61,15 @@ SituacaoEnvio situacaoEnvio = ENVIO_NENHUM;
 unsigned long desconectadoDesde = 0;
 unsigned long proximaTentativaWifi = 0;
 unsigned long esperaWifi = 30000;
+// Motivo da última desconexão do Wi-Fi (código do ESP-IDF), guardado pelo evento e lido no loop.
+volatile int motivoDesconexao = 0;
+int motivoImpresso = 0;
+String motivoWifi = "";          // texto do motivo, para o monitor serial e o /status
+String textoReinicio = "";       // por que a placa ligou, de esp_reset_reason()
+unsigned long ultimoAvisoSinal = 0;
+// Valores de exemplo no topo do arquivo. Com algum, a placa não tenta o Wi-Fi nem o envio.
+bool faltaConfig = false;
+unsigned long ultimoAvisoFalta = 0;
 
 WiFiClientSecure tls;
 HTTPClient http;
@@ -120,6 +130,31 @@ int contarLivres() {
 
 // ---------------- Wi-Fi do campus (nunca trava o loop) ----------------
 
+const char* classeSinal(int rssi) {
+  if (rssi >= -67) return "bom";
+  if (rssi >= -80) return "fraco";
+  return "muito fraco";
+}
+
+// O callback roda em outra tarefa: só guarda o código. O loop imprime.
+void aoDesconectar(arduino_event_id_t evento, arduino_event_info_t info) {
+  motivoDesconexao = info.wifi_sta_disconnected.reason;
+}
+
+String traduzirMotivo(int codigo) {
+  String rede = String(WIFI_SSID);
+  switch (codigo) {
+    case 201: return "a rede " + rede + " não foi encontrada. Confira o nome. A placa só pega 2,4 GHz";
+    case 210: return "a rede " + rede + " usa outro tipo de segurança. Se ela pede usuário, preencha WIFI_USUARIO";
+    case 211: return "a rede " + rede + " é aberta ou usa segurança antiga. Se ela não pede senha, deixe WIFI_SENHA = \"\"";
+    case 15: case 23: case 202: case 204:
+      return strlen(WIFI_USUARIO) > 0 ? "a rede recusou o usuário ou a senha" : "a rede recusou a senha";
+    case 200: return "o sinal da rede sumiu";
+    case 212: return "o sinal está fraco demais";
+    default: return "a conexão falhou (código " + String(codigo) + ")";
+  }
+}
+
 void conectarWifi() {
   if (strlen(WIFI_USUARIO) > 0) {
     WiFi.begin(WIFI_SSID, WPA2_AUTH_PEAP, WIFI_USUARIO, WIFI_USUARIO, WIFI_SENHA);
@@ -133,16 +168,34 @@ void cuidarWifi() {
   unsigned long agora = millis();
   if (WiFi.status() == WL_CONNECTED) {
     if (desconectadoDesde != 0) {
-      Serial.print("[wifi] conectado, IP "); Serial.println(WiFi.localIP());
+      int rssi = WiFi.RSSI();
+      Serial.print("[wifi] conectado em "); Serial.print(WIFI_SSID); Serial.print(", IP "); Serial.print(WiFi.localIP());
+      Serial.print(", sinal "); Serial.print(rssi); Serial.print(" dBm ("); Serial.print(classeSinal(rssi)); Serial.println(")");
       desconectadoDesde = 0;
       esperaWifi = 30000;
+      motivoImpresso = 0;
+      motivoDesconexao = 0;
+      motivoWifi = "";
+    }
+    if (agora - ultimoAvisoSinal >= 60000) {
+      ultimoAvisoSinal = agora;
+      int rssi = WiFi.RSSI();
+      if (rssi < -80) {
+        Serial.print("[wifi] sinal muito fraco ("); Serial.print(rssi); Serial.println(" dBm). Aproxime a placa do roteador ou use antena externa.");
+      }
     }
     return;
   }
   if (desconectadoDesde == 0) {
     desconectadoDesde = agora;
     proximaTentativaWifi = agora + esperaWifi;
-    return;
+  }
+  int motivo = motivoDesconexao;
+  if (motivo != 0 && motivo != motivoImpresso) {
+    motivoImpresso = motivo;
+    motivoWifi = traduzirMotivo(motivo);
+    Serial.print("[wifi] não conectou: "); Serial.print(motivoWifi); Serial.print(". A placa tenta de novo em ");
+    Serial.print(esperaWifi / 1000); Serial.println(" s.");
   }
   // O auto-reconnect do core tenta sozinho. Passada a espera, refaz o begin com espera crescente.
   if ((long)(agora - proximaTentativaWifi) >= 0) {
@@ -153,6 +206,34 @@ void cuidarWifi() {
     esperaWifi = min(esperaWifi * 2, 300000UL);
     proximaTentativaWifi = agora + esperaWifi;
   }
+}
+
+// ---------------- partida ----------------
+
+String motivoDoReinicio() {
+  switch (esp_reset_reason()) {
+    case ESP_RST_POWERON: return "ligou na energia";
+    case ESP_RST_BROWNOUT: return "a tensão caiu. Confira a fonte e o cabo.";
+    case ESP_RST_TASK_WDT: case ESP_RST_INT_WDT: case ESP_RST_WDT: return "travou e o watchdog reiniciou";
+    case ESP_RST_PANIC: return "erro no programa";
+    case ESP_RST_SW: return "reiniciada pelo programa";
+    default: return "código " + String((int)esp_reset_reason());
+  }
+}
+
+// Campos ainda com o valor de exemplo. Uma linha por campo, repetida a cada 10 s.
+void avisarFaltaConfig() {
+  if (strcmp(WIFI_SSID, "NOME-DA-REDE") == 0) Serial.println("[config] Falta preencher WIFI_SSID no topo do arquivo.");
+  if (strcmp(WIFI_SENHA, "senha-da-rede") == 0) Serial.println("[config] Falta preencher WIFI_SENHA no topo do arquivo. Se a rede não pede senha, deixe WIFI_SENHA = \"\".");
+  if (strncmp(TOKEN_CENTRAL, "cole-aqui", 9) == 0) Serial.println("[config] Falta preencher TOKEN_CENTRAL no topo do arquivo.");
+  if (strstr(SUPABASE_URL, "xxxxxxxx") != NULL) Serial.println("[config] Falta preencher SUPABASE_URL no topo do arquivo.");
+  if (strcmp(SUPABASE_ANON_KEY, "eyJ...") == 0) Serial.println("[config] Falta preencher SUPABASE_ANON_KEY no topo do arquivo.");
+}
+
+bool temValorDeExemplo() {
+  return strcmp(WIFI_SSID, "NOME-DA-REDE") == 0 || strcmp(WIFI_SENHA, "senha-da-rede") == 0 ||
+         strncmp(TOKEN_CENTRAL, "cole-aqui", 9) == 0 || strstr(SUPABASE_URL, "xxxxxxxx") != NULL ||
+         strcmp(SUPABASE_ANON_KEY, "eyJ...") == 0;
 }
 
 // ---------------- Supabase ----------------
@@ -387,7 +468,6 @@ void setup() {
 #if MANTER_PAGINA_LOCAL
   WiFi.mode(WIFI_AP_STA);
   WiFi.softAP(AP_SSID, AP_SENHA);
-  Serial.print("Rede local: "); Serial.print(AP_SSID); Serial.print("  http://"); Serial.println(WiFi.softAPIP());
   server.on("/", paginaInicial);
   server.on("/status", statusJson);
   server.begin();
@@ -396,7 +476,29 @@ void setup() {
 #endif
   WiFi.setAutoReconnect(true);
   WiFi.persistent(false);
-  conectarWifi();
+  WiFi.onEvent(aoDesconectar, ARDUINO_EVENT_WIFI_STA_DISCONNECTED);
+
+  textoReinicio = motivoDoReinicio();
+  Serial.println();
+  Serial.print("[bolsao] "); Serial.print(NOME_BOLSAO); Serial.print(" (ID "); Serial.print(ID_BOLSAO); Serial.print("), firmware "); Serial.println(VERSAO_FIRMWARE);
+  Serial.print("[bolsao] reinício: "); Serial.println(textoReinicio);
+  Serial.print("[vagas] "); Serial.print(N_VAGAS); Serial.print(N_VAGAS == 1 ? " vaga:" : " vagas:");
+  for (int i = 0; i < N_VAGAS; i++) { Serial.print(" "); Serial.print(i + 1); Serial.print("=GPIO"); Serial.print(PINO_VAGA[i]); }
+  Serial.println();
+  if (erroConfig.length() > 0) { Serial.print("[config] "); Serial.println(erroConfig); }
+#if MANTER_PAGINA_LOCAL
+  Serial.print("[local] rede "); Serial.print(AP_SSID); Serial.print(", senha "); Serial.print(AP_SENHA);
+  Serial.print(", página http://"); Serial.println(WiFi.softAPIP());
+#endif
+  Serial.print("[wifi] MAC "); Serial.print(WiFi.macAddress()); Serial.println(" (a TI libera este)");
+
+  faltaConfig = temValorDeExemplo();
+  if (faltaConfig) {
+    avisarFaltaConfig();
+    ultimoAvisoFalta = millis();
+  } else {
+    conectarWifi();
+  }
 
   // Se o loop travar por 30 s, a placa reinicia sozinha.
   esp_task_wdt_config_t cfg = {};
@@ -405,7 +507,6 @@ void setup() {
   if (esp_task_wdt_init(&cfg) != ESP_OK) esp_task_wdt_reconfigure(&cfg);
   esp_task_wdt_add(NULL);
 
-  Serial.print("[bolsao] "); Serial.print(NOME_BOLSAO); Serial.print(" pronto, MAC "); Serial.println(WiFi.macAddress());
 }
 
 void loop() {
@@ -413,9 +514,17 @@ void loop() {
 #if MANTER_PAGINA_LOCAL
   server.handleClient();
 #endif
-  cuidarWifi();
-
   unsigned long agora = millis();
+  if (faltaConfig) {
+    // Sem Wi-Fi e sem envio até o arquivo ser preenchido. A rede local continua no ar.
+    if (agora - ultimoAvisoFalta >= 10000) {
+      ultimoAvisoFalta = agora;
+      avisarFaltaConfig();
+    }
+  } else {
+    cuidarWifi();
+  }
+
   if (agora - ultimaLeitura >= 100) {
     ultimaLeitura = agora;
     lerVagas();
@@ -423,6 +532,7 @@ void loop() {
 
   // O POST pode segurar o loop por até 15 s (4 s de conexão, 6 s de TLS e 5 s de resposta).
   // A leitura dos sensores pausa nesse tempo; com o filtro de 3 leituras isso não muda nenhum estado.
+  if (faltaConfig) return;
   if (erroConfig.length() > 0) {
     if (ultimoAvisoConfig == 0 || agora - ultimoAvisoConfig >= 10000) {
       ultimoAvisoConfig = agora;
