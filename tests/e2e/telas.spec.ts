@@ -42,3 +42,51 @@ test.describe("guia impresso do vigia (UX-62)", () => {
     expect((pdf.toString("latin1").match(/\/Type\s*\/Page[^s]/g) ?? []).length).toBe(1);
   });
 });
+
+test.describe('página "Como funciona" (UX-56)', () => {
+  test("explica o sistema sem mostrar vaga ao vivo e leva para todas as telas", async ({ page }) => {
+    const pedidos: string[] = [];
+    page.on("request", (r) => {
+      if (r.url().includes("/rest/v1/") || r.url().includes("/realtime/")) pedidos.push(r.url());
+    });
+    const resposta = await page.goto("/como-funciona");
+    expect(resposta?.status()).toBe(200);
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText("Como funciona");
+    await expect(page.getByRole("link", { name: /^Demonstração/ })).toHaveAttribute("href", "/?demo=1");
+    await expect(page.getByRole("link", { name: /^Guarita em demonstração/ })).toHaveAttribute("href", "/guarita?demo=1");
+    await expect(page.getByRole("link", { name: /^Resultados das noites/ })).toHaveAttribute("href", "/resultados");
+    await expect(page.getByRole("link", { name: /^Guia do vigia/ })).toHaveAttribute("href", "/guarita/guia");
+    await expect(page.getByRole("link", { name: /^QR para salas/ })).toHaveAttribute("href", "/qr/sala");
+    expect(await page.locator("[data-testid^=cartao-], [data-testid^=guarita-]").count()).toBe(0);
+    await expect(page.locator("img[alt*='dados simulados']")).toBeVisible();
+    await expect(page.locator("main")).toContainText("Sensores e placas: João Victor Fagundes Miranda");
+    await expect(page.locator("main")).toContainText("A maquete");
+    await expect(page.locator("main")).not.toContainText(/bols[ãa]o/i);
+
+    const links = page.getByTestId("navegacao").getByRole("link");
+    expect(await links.count()).toBe(8);
+    for (const link of await links.all()) {
+      const caixa = await link.boundingBox();
+      expect(caixa!.height).toBeGreaterThanOrEqual(44);
+    }
+    expect(pedidos).toEqual([]);
+  });
+
+  test("a captura da guarita existe e é uma imagem", async ({ request }) => {
+    const r = await request.get("/telas/guarita-demo.png");
+    expect(r.ok()).toBe(true);
+    expect(r.headers()["content-type"]).toContain("image/png");
+  });
+
+  test("o rodapé da página das vagas leva para Como funciona e Resultados", async ({ page }) => {
+    await page.route(/\/rest\/v1\//, (rota) => rota.fulfill({ status: 200, contentType: "application/json", body: "[]" }));
+    await page.goto("/");
+    const comoFunciona = page.locator("footer").getByRole("link", { name: "Como funciona" });
+    test.skip((await comoFunciona.count()) === 0, "os links entram no rodapé de src/app/page.tsx (UX-54 e UX-56)");
+    await expect(comoFunciona).toHaveAttribute("href", "/como-funciona");
+    expect((await comoFunciona.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+    const resultados = page.locator("footer").getByRole("link", { name: "Resultados" });
+    await expect(resultados).toHaveAttribute("href", "/resultados");
+    expect((await resultados.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+  });
+});

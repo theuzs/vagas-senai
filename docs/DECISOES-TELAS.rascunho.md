@@ -18,3 +18,9 @@ Rascunho dos registros pedidos pelos itens UX-15, UX-18, UX-54, UX-56, UX-62 e U
 ## UX-62: guia impresso do vigia
 
 - `/guarita/guia` é uma folha A4 com os quatro estados da tela (retângulo de 24 mm na cor e no padrão de cada um) e espaço para o nome e o telefone do responsável pelos sensores. A página fica fora dos buscadores (`robots: index false`) e não lê dado nenhum. O passo 5 da seção 7 do `DEPLOY.md` manda imprimir e colar ao lado do monitor.
+
+## UX-56: página "Como funciona"
+
+- `/como-funciona` é estática, sem `useVagas`, e não faz pedido nenhum ao Supabase. Ela explica o problema (texto do desafio), o caminho do dado (`DiagramaCaminho`), a regra do SEM DADOS, a tela da guarita (captura `public/telas/guarita-demo.png`, tirada de `/guarita?demo=1` em 1366x768 por `scripts/capturar-guarita-demo.ts`), a maquete da primeira demonstração e quem fez. Os créditos usam o nome e o curso que o Matheus autorizou: "Sensores e placas: João Victor Fagundes Miranda, aluno de Desenvolvimento de Sistemas do SENAI Blumenau. Site e banco de dados: Matheus Fagundes."
+- A seção "Veja funcionando" virou um painel de navegação com um cartão por tela (página das vagas, demonstração, guarita, guarita em demonstração, guia do vigia, folha do QR, QR para salas e resultados). O Matheus pediu um lugar de onde se chega a todas as telas; o item só listava três links.
+- Os links "Como funciona" e "Resultados" no rodapé de `/` ficam por conta de quem mexe em `src/app/page.tsx`.
