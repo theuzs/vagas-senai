@@ -51,6 +51,11 @@ const int N_VAGAS = sizeof(PINO_VAGA) / sizeof(PINO_VAGA[0]);
 
 bool estado[N_VAGAS]   = {false};
 int  contagem[N_VAGAS] = {0};
+// Para testar os sensores pela página local: quando cada vaga mudou e quantas vezes no minuto.
+unsigned long mudouEm[N_VAGAS] = {0};   // millis() da última troca; 0 = nunca
+int  trocas[N_VAGAS] = {0};             // trocas no minuto atual
+unsigned long inicioMinuto = 0;
+const int LIMITE_TROCAS_MIN = 12;       // a partir daqui a vaga é "instável"
 unsigned long ultimaLeitura = 0;
 unsigned long ultimoEnvio   = 0;
 unsigned long ultimoEnvioOk = 0;
@@ -94,6 +99,10 @@ void lerVagas() {
       if (contagem[i] >= 3) {
         estado[i] = bruto;
         contagem[i] = 0;
+        mudouEm[i] = millis();
+        trocas[i]++;
+        Serial.print("[vaga] "); Serial.print(i + 1); Serial.print(" (GPIO "); Serial.print(PINO_VAGA[i]); Serial.print(") ");
+        Serial.println(bruto ? "ocupada" : "livre");
       }
     } else {
       contagem[i] = 0;
@@ -126,6 +135,17 @@ void conferirPinos() {
       Serial.println(", que pode atrapalhar a partida da placa.");
     }
     pinMode(g, INPUT);
+  }
+}
+
+// Fecha o minuto: avisa das vagas instáveis e zera as contagens.
+void fecharMinuto() {
+  for (int i = 0; i < N_VAGAS; i++) {
+    if (trocas[i] >= LIMITE_TROCAS_MIN) {
+      Serial.print("[vaga] A vaga "); Serial.print(i + 1); Serial.print(" (GPIO "); Serial.print(PINO_VAGA[i]); Serial.print(") trocou ");
+      Serial.print(trocas[i]); Serial.println(" vezes neste minuto. Confira o fio e o alinhamento do sensor.");
+    }
+    trocas[i] = 0;
   }
 }
 
@@ -381,13 +401,19 @@ const char PAGINA[] PROGMEM = R"rawliteral(
   .resumo.sem-dados .numero { font-size:2rem; color:var(--sem-dados); display:flex; align-items:center; justify-content:center; gap:10px; }
   .resumo.sem-dados .rotulo { color:var(--texto); }
   .alerta { width:1.25em; height:1.25em; flex:none; }
-  .patio { width:100%; max-width:640px; display:grid; grid-template-columns:repeat(auto-fit,minmax(100px,1fr)); gap:12px; }
-  .vaga { position:relative; background:var(--superficie-2); border-radius:14px; padding:20px 8px; text-align:center; border:2px solid var(--vaga-ocupada); }
-  .vaga .num { font-size:.8rem; color:var(--texto-secundario); margin-bottom:8px; }
-  .vaga .status { font-weight:600; font-size:.9rem; color:var(--texto); }
+  .patio { width:100%; max-width:640px; display:grid; grid-template-columns:repeat(auto-fill,minmax(64px,1fr)); gap:8px; }
+  .vaga { position:relative; background:var(--superficie-2); border-radius:10px; padding:8px 4px; text-align:center; border:2px solid var(--vaga-ocupada); }
+  .vaga .num { font-size:1rem; font-weight:700; line-height:1.2; color:var(--texto); }
+  .vaga .gpio { font-size:.7rem; color:var(--texto-secundario); margin:2px 0; white-space:nowrap; }
+  .vaga .status { font-weight:600; font-size:.75rem; color:var(--texto); white-space:nowrap; }
+  .vaga .extra { font-size:.65rem; font-weight:600; margin-top:2px; white-space:nowrap; }
   .vaga.livre { background:var(--livre-fundo); border-color:var(--livre); }
   .vaga.livre .status { color:var(--livre); }
-  .vaga .x { position:absolute; top:6px; right:6px; width:18px; height:18px; color:var(--texto); }
+  .vaga.mudou { outline:3px solid #eef3f7; outline-offset:-1px; }
+  .vaga.mudou .extra { color:#eef3f7; }
+  .vaga.instavel { border-style:dashed; border-color:#fbbf24; }
+  .vaga.instavel .extra { color:#fbbf24; }
+  .vaga .x { position:absolute; top:3px; right:3px; width:12px; height:12px; color:var(--texto); }
   .detalhes { width:100%; max-width:640px; margin-top:28px; background:var(--superficie); border-radius:14px; padding:14px 16px; font-size:.9rem; }
   .detalhes h2 { font-size:1rem; font-weight:600; margin-bottom:8px; }
   .detalhes h2 span { color:var(--texto-secundario); font-weight:400; }
@@ -400,7 +426,7 @@ const char PAGINA[] PROGMEM = R"rawliteral(
 </head>
 <body>
   <header><h1 id="titulo">Placa do estacionamento</h1><p>Página local da placa. Os motoristas usam vagas.rubysistemas.com.br.</p></header>
-  <div class="faixa" id="faixa" aria-live="polite"><svg class="icone-faixa" id="faixa-icone" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 2.5 20h19L12 3Z"/><path d="M12 9v5"/><path d="M12 17.5h.01"/></svg><div><p id="faixa-texto">A página ainda não recebeu dados da placa.</p><p id="faixa-extra" hidden></p></div></div>
+  <div class="faixa" id="faixa" aria-live="polite"><svg class="icone-faixa" id="faixa-icone" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 2.5 20h19L12 3Z"/><path d="M12 9v5"/><path d="M12 17.5h.01"/></svg><div><p id="faixa-texto">A página ainda não recebeu dados da placa.</p><p id="faixa-extra" hidden></p><p id="faixa-vaga" hidden></p></div></div>
   <div class="resumo sem-dados" id="resumo">
     <div class="numero" id="livres"><svg class="alerta" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 2.5 20h19L12 3Z"/><path d="M12 9v5"/><path d="M12 17.5h.01"/></svg><span>SEM DADOS</span></div>
     <div class="rotulo" id="rotulo">A página ainda não recebeu dados da placa.</div>
@@ -418,7 +444,8 @@ const char PAGINA[] PROGMEM = R"rawliteral(
   const ICONE_ALERTA = '<svg class="alerta" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">' + ALERTA + '</svg>';
   const patio=document.getElementById('patio'),resumo=document.getElementById('resumo'),ponto=document.getElementById('ponto');
   const livresEl=document.getElementById('livres'),rotuloEl=document.getElementById('rotulo'),atualizadoEl=document.getElementById('atualizado');
-  const faixa=document.getElementById('faixa'),faixaTexto=document.getElementById('faixa-texto'),faixaExtra=document.getElementById('faixa-extra'),faixaIcone=document.getElementById('faixa-icone');
+  const faixa=document.getElementById('faixa'),faixaTexto=document.getElementById('faixa-texto'),faixaExtra=document.getElementById('faixa-extra'),faixaIcone=document.getElementById('faixa-icone'),faixaVaga=document.getElementById('faixa-vaga');
+  const LIMITE_TROCAS_MIN = 12;
   const detalhes=document.getElementById('detalhes'),detalhesLista=document.getElementById('detalhes-lista'),detalhesIdade=document.getElementById('detalhes-idade');
   let ultimoDado=null, ultimoOk=null, falhou=false, desenhado=null;
 
@@ -469,12 +496,25 @@ const char PAGINA[] PROGMEM = R"rawliteral(
     }
   }
 
-  function mostrarFaixa(ok, principal, extra){
+  function linha(el, t){ if (t) { texto(el, t); el.hidden = false; } else { el.hidden = true; texto(el, ''); } }
+  function mostrarFaixa(ok, principal, extra, vaga){
     classe(faixa, 'faixa' + (ok ? ' ok' : ''));
     const icone = ok ? CERTO : ALERTA;
     if (faixaIcone.innerHTML !== icone) faixaIcone.innerHTML = icone;
     texto(faixaTexto, principal);
-    if (extra) { texto(faixaExtra, extra); faixaExtra.hidden = false; } else { faixaExtra.hidden = true; texto(faixaExtra, ''); }
+    linha(faixaExtra, extra);
+    linha(faixaVaga, vaga);
+  }
+
+  // Primeira vaga instável do minuto, para a faixa.
+  function avisoInstavel(d){
+    if (!d.trocas_min) return null;
+    for (let i = 0; i < d.vagas.length; i++) {
+      if (d.trocas_min[i] >= LIMITE_TROCAS_MIN) {
+        return 'A vaga ' + (i + 1) + ' (GPIO ' + d.pinos[i] + ') trocou ' + d.trocas_min[i] + ' vezes neste minuto. Confira o fio e o alinhamento do sensor.';
+      }
+    }
+    return null;
   }
 
   function desenharDetalhes(d){
@@ -495,9 +535,12 @@ const char PAGINA[] PROGMEM = R"rawliteral(
   function desenharVagas(d){
     patio.innerHTML='';
     d.vagas.forEach((ocupada,i)=>{
+      const mudou = d.mudou_ha && d.mudou_ha[i] >= 0 && d.mudou_ha[i] < 5;
+      const instavel = d.trocas_min && d.trocas_min[i] >= LIMITE_TROCAS_MIN;
       const el=document.createElement('div');
-      el.className='vaga '+(ocupada?'ocupada':'livre');
-      el.innerHTML=(ocupada?X:'')+'<div class="num">Vaga '+(i+1)+'</div><div class="status">'+(ocupada?'Ocupada':'Livre')+'</div>';
+      el.className='vaga '+(ocupada?'ocupada':'livre')+(mudou?' mudou':'')+(instavel?' instavel':'');
+      const extra = instavel ? 'instável' : mudou ? 'mudou agora' : '';
+      el.innerHTML=(ocupada?X:'')+'<div class="num">Vaga '+(i+1)+'</div><div class="gpio">GPIO '+(d.pinos ? d.pinos[i] : '?')+'</div><div class="status">'+(ocupada?'Ocupada':'Livre')+'</div>'+(extra?'<div class="extra">'+extra+'</div>':'');
       patio.appendChild(el);
     });
   }
@@ -514,7 +557,7 @@ const char PAGINA[] PROGMEM = R"rawliteral(
       patio.innerHTML = ''; desenhado = null;
       classe(ponto, 'ponto sem-dados');
       texto(atualizadoEl, semResposta);
-      mostrarFaixa(false, semResposta, null);
+      mostrarFaixa(false, semResposta, null, null);
       if (ultimoDado) texto(detalhesIdade, '(dados de ' + s + ' s atrás)');
       return;
     }
@@ -528,7 +571,7 @@ const char PAGINA[] PROGMEM = R"rawliteral(
     if (d !== desenhado) { desenharVagas(d); desenharDetalhes(d); desenhado = d; }
     texto(detalhesIdade, '');
     const ok = d.envio === 'ok';
-    mostrarFaixa(ok, textoFaixa(d), ok ? null : 'Enquanto isso, o site mostra SEM DADOS para o ' + d.nome + '.');
+    mostrarFaixa(ok, textoFaixa(d), ok ? null : 'Enquanto isso, o site mostra SEM DADOS para o ' + d.nome + '.', avisoInstavel(d));
     classe(ponto, 'ponto' + (falhou ? ' sem-dados' : ''));
     texto(atualizadoEl, falhou ? semResposta : 'A página consulta a placa a cada segundo.');
   }
@@ -601,6 +644,16 @@ void statusJson() {
   json += ",\"pinos\":[";
   for (int i = 0; i < N_VAGAS; i++) {
     json += String(PINO_VAGA[i]);
+    if (i < N_VAGAS - 1) json += ",";
+  }
+  json += "],\"mudou_ha\":[";
+  for (int i = 0; i < N_VAGAS; i++) {
+    json += String(mudouEm[i] == 0 ? -1 : (long)((millis() - mudouEm[i]) / 1000));
+    if (i < N_VAGAS - 1) json += ",";
+  }
+  json += "],\"trocas_min\":[";
+  for (int i = 0; i < N_VAGAS; i++) {
+    json += String(trocas[i]);
     if (i < N_VAGAS - 1) json += ",";
   }
   json += "]}";
@@ -694,6 +747,10 @@ void loop() {
   if (agora - ultimaLeitura >= 100) {
     ultimaLeitura = agora;
     lerVagas();
+  }
+  if (agora - inicioMinuto >= 60000) {
+    inicioMinuto = agora;
+    fecharMinuto();
   }
 
   // O POST pode segurar o loop por até 15 s (4 s de conexão, 6 s de TLS e 5 s de resposta).

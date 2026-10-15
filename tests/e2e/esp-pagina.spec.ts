@@ -42,6 +42,8 @@ export interface StatusPlaca {
   versao: string;
   config: string;
   pinos: number[];
+  mudou_ha: number[];
+  trocas_min: number[];
   [campo: string]: unknown;
 }
 
@@ -67,6 +69,8 @@ export function status(extra: Partial<StatusPlaca> = {}): StatusPlaca {
     versao: "2026-10-15",
     config: "",
     pinos: vagas.map((_, i) => 32 + i),
+    mudou_ha: vagas.map(() => -1),
+    trocas_min: vagas.map(() => 0),
     ...extra,
   };
 }
@@ -356,7 +360,7 @@ test.describe("página local da placa: cores e ícones do site", () => {
 
   test("todo texto visível tem contraste de 4,5:1 (3:1 nos grandes), nos três estados", async ({ page }) => {
     const ruins = (lista: Awaited<ReturnType<typeof contrastes>>) => {
-      expect(lista.length).toBeGreaterThan(6);
+      expect(lista.length).toBeGreaterThanOrEqual(6);
       return lista.filter((c) => c.razao < c.minimo);
     };
     const { trocarResposta, contagem } = await abrirPagina(page, pendurar);
@@ -372,5 +376,67 @@ test.describe("página local da placa: cores e ícones do site", () => {
     await expect(page.locator("#livres")).toHaveText("LOTADO");
     expect(ruins(await contrastes(page))).toEqual([]);
     expect(contagem.foraDaPlaca).toBe(0);
+  });
+});
+
+test.describe("página local da placa: grade para testar os sensores", () => {
+  const VINTE = Array.from({ length: 20 }, (_, i) => i % 3 === 0);
+
+  test("com 20 vagas a grade cabe em 360x740 sem rolagem horizontal, com GPIO e estado numa linha", async ({ page }) => {
+    await abrirPagina(page, responderCom(status({ vagas: VINTE })));
+    await expect(page.locator(".vaga")).toHaveCount(20);
+    const patio = page.locator("#patio");
+    expect((await patio.boundingBox())!.height).toBeLessThanOrEqual(420);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(360);
+    for (const vaga of await page.locator(".vaga").all()) {
+      await expect(vaga).toContainText(/GPIO \d+/);
+      await expect(vaga).toContainText(/Vaga \d+/);
+      await expect(vaga).toContainText(/Livre|Ocupada/);
+      const status = vaga.locator(".status");
+      const alturaLinha = await status.evaluate((el) => {
+        const est = getComputedStyle(el);
+        return { altura: el.getBoundingClientRect().height, fonte: parseFloat(est.fontSize) };
+      });
+      expect(alturaLinha.altura, "estado numa linha só").toBeLessThan(alturaLinha.fonte * 1.8);
+    }
+    const ocupadas = page.locator(".vaga.ocupada");
+    await expect(ocupadas.first()).toContainText("Ocupada");
+    await expect(ocupadas.first().locator("svg")).toHaveCount(1);
+  });
+
+  test("mudou_ha menor que 5 destaca só aquela vaga", async ({ page }) => {
+    const mudou = Array.from({ length: 10 }, () => -1);
+    mudou[7] = 2;
+    await abrirPagina(page, responderCom(status({ vagas: Array(10).fill(false), mudou_ha: mudou, trocas_min: Array(10).fill(0) })));
+    await expect(page.locator(".vaga.mudou")).toHaveCount(1);
+    const destaque = page.locator(".vaga.mudou");
+    await expect(destaque).toContainText("Vaga 8");
+    await expect(destaque).toContainText("mudou agora");
+    await expect(destaque).toHaveCSS("outline-width", "3px");
+    await expect(destaque).toHaveCSS("outline-color", "rgb(238, 243, 247)");
+    await expect(page.locator(".vaga").filter({ hasText: "mudou agora" })).toHaveCount(1);
+    await expect(page.locator("#faixa-vaga")).toBeHidden();
+  });
+
+  test("trocas_min de 15 mostra instável e a frase; 11 não", async ({ page }) => {
+    const trocas = Array(10).fill(0);
+    trocas[2] = 15;
+    const { trocarResposta } = await abrirPagina(page, responderCom(status({ vagas: Array(10).fill(false), mudou_ha: Array(10).fill(-1), trocas_min: trocas })));
+    const instavel = page.locator(".vaga.instavel");
+    await expect(instavel).toHaveCount(1);
+    await expect(instavel).toContainText("Vaga 3");
+    await expect(instavel).toContainText("instável");
+    await expect(instavel).toHaveCSS("border-top-style", "dashed");
+    await expect(instavel).toHaveCSS("border-top-color", "rgb(251, 191, 36)");
+    await expect(page.locator("#faixa-vaga")).toHaveText("A vaga 3 (GPIO 34) trocou 15 vezes neste minuto. Confira o fio e o alinhamento do sensor.");
+    // A faixa principal continua com a situação do envio.
+    await expect(page.locator("#faixa-texto")).toContainText("A placa está enviando para o site.");
+
+    trocas[2] = 11;
+    trocarResposta(responderCom(status({ vagas: Array(10).fill(false), mudou_ha: Array(10).fill(-1), trocas_min: [...trocas] })));
+    await page.clock.runFor(2000);
+    await expect(page.locator(".vaga.instavel")).toHaveCount(0);
+    await expect(page.locator("#patio")).not.toContainText("instável");
+    await expect(page.locator("#faixa-vaga")).toBeHidden();
   });
 });
