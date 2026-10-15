@@ -84,7 +84,9 @@ A tela do vigia fica em `https://vagas.rubysistemas.com.br/guarita`.
 
 ## 8. QR code na guarita
 
-Abra `https://vagas.rubysistemas.com.br/qr` e imprima (a página já vem em A4). Cole na guarita e, se quiser, nas entradas dos bolsões.
+Abra `https://vagas.rubysistemas.com.br/qr` e toque em "Imprimir esta folha" (a página já vem em A4, numa página só; na janela de impressão, escolha papel A4 e escala 100 %). Imprima em papel fosco ou plastifique com plástico fosco: o brilho atrapalha a câmera à noite. Cole na guarita e nas entradas dos estacionamentos com o centro do QR entre 1,0 e 1,3 m do chão, na altura dos olhos de quem está no carro. A folha impressa antes de 15/10/2026 tinha um QR menor e precisa ser impressa de novo.
+
+Para as salas de aula, abra `https://vagas.rubysistemas.com.br/qr/sala`: é a mesma folha, com instruções para adicionar a página à tela inicial do celular.
 
 ## Se algo der errado
 
