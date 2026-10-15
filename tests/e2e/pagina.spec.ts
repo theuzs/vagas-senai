@@ -41,9 +41,11 @@ test.describe("página das vagas", () => {
 
     // O número conta só as vagas comuns: A tem 4 livres, 1 delas PCD.
     const a = page.getByTestId("cartao-A");
-    await expect(a).toHaveAttribute("data-situacao", "livre");
+    // 3 comuns livres de 5 é "poucas" (limite 3)
+    await expect(a).toHaveAttribute("data-situacao", "poucas");
     await expect(a).toContainText("3");
     await expect(a).toContainText("livres");
+    await expect(a).toContainText("Poucas");
     await expect(a).toContainText("+1 especial");
     await expect(page.getByTestId("cartao-C")).toHaveAttribute("data-situacao", "lotado");
     await expect(page.getByTestId("cartao-C")).toContainText("LOTADO");
@@ -63,7 +65,7 @@ test.describe("página das vagas", () => {
     await expect(grade.locator("[data-tipo=pcd]")).toHaveCount(2);
     // Até 12 vagas a grade é a grande, numerada, com ícones.
     for (const c of await celulas.all()) expect((await c.boundingBox())!.width).toBeGreaterThanOrEqual(40);
-    await expect(grade.locator("[data-vaga=ocupada] [data-icone=carro]")).toHaveCount(4);
+    await expect(grade.locator("[data-vaga=ocupada] [data-icone=carro]")).toHaveCount(3);
     await expect(grade.locator("[data-tipo=pcd][data-vaga=livre] [data-icone=cadeirante]")).toHaveCount(1);
 
     await expect(page.getByTestId("secao-A")).toContainText("3 livres de 5 vagas comuns");
@@ -102,11 +104,11 @@ test.describe("página das vagas", () => {
     await page.goto("/");
     await expect(page.getByTestId("cartao-A")).toHaveAttribute("data-situacao", "livre");
 
-    await page.clock.fastForward(20_000);
+    await page.clock.runFor(20_000);
     await expect(page.getByTestId("cartao-A")).toHaveAttribute("data-situacao", "livre");
     await expect(page.getByTestId("secao-A")).toContainText(/há \d+ s/);
 
-    await page.clock.fastForward(12_000);
+    await page.clock.runFor(12_000);
     await expect(page.getByTestId("cartao-A")).toHaveAttribute("data-situacao", "sem-dados");
     await expect(page.getByTestId("cartao-A")).not.toContainText(/\b\d+\b/);
     const grade = page.getByTestId("grade-A");
@@ -328,7 +330,7 @@ test.describe("página das vagas", () => {
     await expect(page.getByTestId("resumo")).toContainText("Os três estacionamentos estão lotados.");
 
     await page.goto("/?maquete=1");
-    await expect(page.getByTestId("cartao-M")).toHaveAttribute("data-situacao", "livre");
+    await expect(page.getByTestId("cartao-M")).toHaveAttribute("data-situacao", "poucas");
     await expect(page.getByTestId("cartao-A")).toHaveCount(0);
     await expect(page.getByTestId("faixa-maquete")).toContainText("Maquete");
   });

@@ -1,3 +1,4 @@
+-- A maquete (bolsão com publico = false) fica fora dos resultados.
 -- Resultados das noites: leitura do histórico para a tela /resultados.
 -- anon não lê vagas.historico direto (e continua sem ler). Estas três funções, em
 -- security definer, devolvem só agregados e a série de uma noite, nunca a tabela.
@@ -22,7 +23,8 @@ as $$
          pg_catalog.min(h.vagas_livres)::int as min_livres,
          pg_catalog.max(h.total_vagas)::int as total_vagas
     from vagas.historico h
-   where (h.momento at time zone 'America/Sao_Paulo')::time >= time '18:00'
+   where exists (select 1 from vagas.bolsoes b where b.id = h.bolsao_id and b.publico)
+     and (h.momento at time zone 'America/Sao_Paulo')::time >= time '18:00'
      and (h.momento at time zone 'America/Sao_Paulo')::time < time '22:30'
      and (h.momento at time zone 'America/Sao_Paulo')::date > (pg_catalog.now() at time zone 'America/Sao_Paulo')::date - least(greatest(p_dias, 1), 120)
    group by 1, 2
@@ -42,7 +44,8 @@ as $$
   with fotos as (
     select (h.momento at time zone 'America/Sao_Paulo')::date as noite, h.momento, h.vagas_livres
       from vagas.historico h
-     where (h.momento at time zone 'America/Sao_Paulo')::time >= time '18:00'
+     where exists (select 1 from vagas.bolsoes b where b.id = h.bolsao_id and b.publico)
+       and (h.momento at time zone 'America/Sao_Paulo')::time >= time '18:00'
        and (h.momento at time zone 'America/Sao_Paulo')::time < time '22:30'
        and (h.momento at time zone 'America/Sao_Paulo')::date > (pg_catalog.now() at time zone 'America/Sao_Paulo')::date - least(greatest(p_dias, 1), 120)
   ),
@@ -79,7 +82,8 @@ set search_path = ''
 as $$
   select h.bolsao_id, h.momento, h.vagas_livres::int, h.total_vagas::int
     from vagas.historico h
-   where (h.momento at time zone 'America/Sao_Paulo')::date = p_noite
+   where exists (select 1 from vagas.bolsoes b where b.id = h.bolsao_id and b.publico)
+     and (h.momento at time zone 'America/Sao_Paulo')::date = p_noite
      and (h.momento at time zone 'America/Sao_Paulo')::time >= time '18:00'
      and (h.momento at time zone 'America/Sao_Paulo')::time < time '22:30'
    order by h.bolsao_id, h.momento;

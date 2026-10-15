@@ -43,7 +43,8 @@ test.describe("guardas do SEM DADOS", () => {
         const el = page.getByTestId(`${prefixo}-${id}`);
         await expect(el).toHaveAttribute("data-situacao", "sem-dados");
         await expect(el).toContainText("SEM DADOS");
-        await expect(el).not.toContainText(/\d/);
+        // Na guarita a linha de baixo diz a hora do último dado; o centro nunca tem dígito.
+        await expect(rota === "/" ? el : page.getByTestId(`centro-${id}`)).not.toContainText(/\d/);
         await expect(el).toHaveCSS("border-top-style", "dashed");
         const fundo = await el.evaluate((e) => getComputedStyle(e).backgroundImage);
         expect(fundo).toContain("repeating-linear-gradient");

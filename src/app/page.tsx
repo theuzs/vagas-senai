@@ -1,5 +1,6 @@
 import { preconnect, prefetchDNS } from "react-dom";
 import { ConviteInstalar } from "@/components/convite-instalar";
+import { EnviarLink } from "@/components/enviar-link";
 import { PainelVagas } from "@/components/painel-vagas";
 import { configuracaoSupabase } from "@/lib/vagas/configuracao";
 
@@ -38,6 +39,7 @@ export default function Pagina() {
             Folha do QR code
           </a>
         </nav>
+        <EnviarLink />
       </footer>
     </main>
   );

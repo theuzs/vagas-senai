@@ -60,7 +60,7 @@ export function SecaoBolsao({
                 <span
                   key={e.tipo}
                   data-testid={`especial-${e.tipo}`}
-                  className="inline-flex items-center gap-1 whitespace-nowrap rounded-full border border-[var(--vaga-especial)] px-2 py-0.5 text-sm text-texto"
+                  className="inline-flex items-center gap-1 rounded-full border border-[var(--vaga-especial)] px-2 py-0.5 text-sm text-texto"
                 >
                   {ICONE_DO_TIPO[e.tipo] && <Icone nome={ICONE_DO_TIPO[e.tipo]} className="h-[1em] w-[1em]" />}
                   {textoEspecial(e)}

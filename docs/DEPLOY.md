@@ -91,7 +91,7 @@ Para as salas de aula, abra `https://vagas.rubysistemas.com.br/qr/sala`: é a me
 
 ## 9. Resultados para a banca
 
-A tela `https://vagas.rubysistemas.com.br/resultados` mostra, noite a noite, quantas vezes um bloco lotou enquanto outro tinha vaga. Ela lê as funções `vagas.resumo_noites`, `vagas.impacto` e `vagas.serie_noite` da migration `0002_resultados.sql` (aplique com `npm run db:aplicar`).
+A tela `https://vagas.rubysistemas.com.br/resultados` mostra, noite a noite, quantas vezes um bloco lotou enquanto outro tinha vaga. Ela lê as funções `vagas.resumo_noites`, `vagas.impacto` e `vagas.serie_noite` da migration `0003_resultados.sql` (aplique com `npm run db:aplicar`).
 
 Antes da banca, confira desde quando há fotos e apague as anteriores à instalação das placas, para o simulador e os testes não entrarem na conta:
 

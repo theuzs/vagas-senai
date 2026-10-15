@@ -1,5 +1,6 @@
 "use client";
 
+import { estadoDemo } from "@/lib/vagas/fonte-demo";
 import { horaCurta, indicadorConexao } from "@/lib/vagas/regras";
 import type { CausaSemDados, Situacao } from "@/lib/vagas/tipos";
 import type { Modo } from "@/lib/vagas/use-vagas";
@@ -11,6 +12,8 @@ export interface PropsAvisos {
   online: boolean;
   leituraOkEm: number | null;
   tentarAgora: () => void;
+  /** Hora do servidor, para a cena da demonstração. */
+  agoraMs?: number;
   className?: string;
   /** A guarita mostra a demonstração no título e a falha na faixa de baixo (D10). */
   semFaixaDemo?: boolean;
@@ -18,8 +21,55 @@ export interface PropsAvisos {
 }
 
 /** Faixa de demonstração, aviso de configuração e aviso de falha de leitura (UX-06, UX-34). */
-export function Avisos({ modo, causa, online, leituraOkEm, tentarAgora, className = "text-sm", semFaixaDemo = false, semAvisoErro = false }: PropsAvisos) {
-  const erro = (modo === "supabase" || modo === "maquete") && causa === "sem-conexao" && !semAvisoErro;
+/** A faixa da demonstração, presa no topo da página (UX-34, UX-35). */
+export function FaixaDemo({
+  agoraMs,
+  className = "text-sm",
+}: {
+  agoraMs?: number;
+  className?: string;
+}) {
+  const cena = agoraMs !== undefined ? estadoDemo(agoraMs).cena : null;
+  return (
+    <div
+      data-testid="faixa-demo"
+      className={`sticky top-0 z-20 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 rounded-lg border border-demo bg-[var(--demo-fundo)] px-3 py-2 font-semibold text-demo ${className}`}
+    >
+      <span className="flex items-center gap-2">
+        <Icone nome="alerta" className="h-[1.2em] w-[1.2em] shrink-0" />
+        Demonstração: os números desta página são simulados e não vêm do
+        estacionamento.
+      </span>
+      {/* Um <a> comum: a página precisa recarregar para sair do modo demo. */}
+      {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
+      <a href="/" className="inline-flex min-h-11 items-center underline">
+        Ver as vagas reais
+      </a>
+      {cena && (
+        <p data-testid="cena-demo" className="basis-full font-normal">
+          Cena {cena.numero} de 4: {cena.texto} Próxima cena em{" "}
+          {cena.proximaEmS} s.
+        </p>
+      )}
+    </div>
+  );
+}
+
+export function Avisos({
+  modo,
+  causa,
+  online,
+  leituraOkEm,
+  tentarAgora,
+  agoraMs,
+  className = "text-sm",
+  semFaixaDemo = false,
+  semAvisoErro = false,
+}: PropsAvisos) {
+  const erro =
+    (modo === "supabase" || modo === "maquete") &&
+    causa === "sem-conexao" &&
+    !semAvisoErro;
   const textoErro = !online
     ? "O celular está sem internet. A página lê as vagas de novo quando a conexão voltar."
     : leituraOkEm !== null
@@ -28,37 +78,48 @@ export function Avisos({ modo, causa, online, leituraOkEm, tentarAgora, classNam
   return (
     <>
       {modo === "demo" && !semFaixaDemo && (
-        <div data-testid="faixa-demo" className={`sticky top-0 z-20 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 rounded-lg border border-demo bg-[var(--demo-fundo)] px-3 py-2 font-semibold text-demo ${className}`}>
-          <span className="flex items-center gap-2">
-            <Icone nome="alerta" className="h-[1.2em] w-[1.2em] shrink-0" />
-            Demonstração: os números desta página são simulados e não vêm do estacionamento.
-          </span>
-          {/* Um <a> comum: a página precisa recarregar para sair do modo demo. */}
-          {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
-          <a href="/" className="inline-flex min-h-11 items-center underline">
-            Ver as vagas reais
-          </a>
-        </div>
+        <FaixaDemo agoraMs={agoraMs} className={className} />
       )}
-      {modo === "maquete" && !semFaixaDemo && (
-        <p data-testid="faixa-maquete" className={`flex items-center gap-2 rounded-lg border border-demo bg-[var(--demo-fundo)] px-3 py-2 font-semibold text-demo ${className}`}>
+      {modo === "maquete" && (
+        <p
+          data-testid="faixa-maquete"
+          className={`flex items-center gap-2 rounded-lg border border-demo bg-[var(--demo-fundo)] px-3 py-2 font-semibold text-demo ${className}`}
+        >
           <Icone nome="alerta" className="h-[1.2em] w-[1.2em] shrink-0" />
           Maquete: sensores reais de uma maquete, fora do estacionamento.
         </p>
       )}
       {modo === "sem-configuracao" && (
-        <div role="alert" data-testid="aviso-configuracao" className={`rounded-lg border border-sem-dados bg-[var(--sem-dados-fundo)] px-3 py-2 text-sem-dados ${className}`}>
-          <p>A página está fora do ar por um erro de configuração. Confira as vagas no local.</p>
+        <div
+          role="alert"
+          data-testid="aviso-configuracao"
+          className={`rounded-lg border border-sem-dados bg-[var(--sem-dados-fundo)] px-3 py-2 text-sem-dados ${className}`}
+        >
+          <p>
+            A página está fora do ar por um erro de configuração. Confira as
+            vagas no local.
+          </p>
           <details className="mt-1">
-            <summary className="inline-flex min-h-11 cursor-pointer items-center">Ver detalhes técnicos</summary>
-            Faltam NEXT_PUBLIC_SUPABASE_URL e NEXT_PUBLIC_SUPABASE_ANON_KEY no build da Vercel.
+            <summary className="inline-flex min-h-11 cursor-pointer items-center">
+              Ver detalhes técnicos
+            </summary>
+            Faltam NEXT_PUBLIC_SUPABASE_URL e NEXT_PUBLIC_SUPABASE_ANON_KEY no
+            build da Vercel.
           </details>
         </div>
       )}
       {erro && (
-        <div role="alert" data-testid="aviso-erro" className={`flex flex-wrap items-center justify-between gap-x-3 gap-y-2 rounded-lg border border-sem-dados bg-[var(--sem-dados-fundo)] px-3 py-2 text-sem-dados ${className}`}>
+        <div
+          role="alert"
+          data-testid="aviso-erro"
+          className={`flex flex-wrap items-center justify-between gap-x-3 gap-y-2 rounded-lg border border-sem-dados bg-[var(--sem-dados-fundo)] px-3 py-2 text-sem-dados ${className}`}
+        >
           <span>{textoErro}</span>
-          <button type="button" onClick={tentarAgora} className="min-h-11 rounded-lg border border-sem-dados px-3 font-semibold">
+          <button
+            type="button"
+            onClick={tentarAgora}
+            className="min-h-11 rounded-lg border border-sem-dados px-3 font-semibold"
+          >
             Tentar agora
           </button>
         </div>
@@ -90,7 +151,11 @@ export function Conexao({
   className?: string;
   ultimoDadoMs?: number | null;
 }) {
-  const i = indicadorConexao(modo === "maquete" ? "supabase" : modo, causa, situacoes);
+  const i = indicadorConexao(
+    modo === "maquete" ? "supabase" : modo,
+    causa,
+    situacoes,
+  );
   const alerta = i.tom === "alerta";
   return (
     <p
@@ -100,9 +165,18 @@ export function Conexao({
       className={`flex items-center gap-2 font-semibold uppercase tracking-wide ${alerta ? "rounded-lg border border-sem-dados bg-[var(--sem-dados-fundo)] px-2 text-sem-dados" : i.chave === "demo" ? "text-demo" : "text-texto-secundario"} ${className}`}
     >
       <span className="relative inline-flex h-[0.8em] w-[0.8em]">
-        <span aria-hidden="true" className={`inline-block h-full w-full rounded-full ${i.chave === "demo" ? "bg-demo" : TOM[i.tom]}`} />
+        <span
+          aria-hidden="true"
+          className={`inline-block h-full w-full rounded-full ${i.chave === "demo" ? "bg-demo" : TOM[i.tom]}`}
+        />
         {ultimoDadoMs !== null && (
-          <span key={ultimoDadoMs} data-testid="pulso-dado" data-ultimo={ultimoDadoMs} aria-hidden="true" className={`ping-unico absolute inset-0 rounded-full ${i.chave === "demo" ? "bg-demo" : TOM[i.tom]}`} />
+          <span
+            key={ultimoDadoMs}
+            data-testid="pulso-dado"
+            data-ultimo={ultimoDadoMs}
+            aria-hidden="true"
+            className={`ping-unico absolute inset-0 rounded-full ${i.chave === "demo" ? "bg-demo" : TOM[i.tom]}`}
+          />
         )}
       </span>
       {alerta && <Icone nome="alerta" className="h-[1.2em] w-[1.2em]" />}

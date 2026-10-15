@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { anunciosGuarita, avisoColunaSemDados, categoriaAnuncio, dadosVisiveis, especiaisLivres, horaCurta, orientacaoGuarita, textoEspecial, textoIdade, textoSemDados, type EstadoAnuncio } from "@/lib/vagas/regras";
 import { servidorResponde } from "@/lib/vagas/servidor-responde";
 import type { Bolsao, CausaSemDados, Situacao } from "@/lib/vagas/tipos";
+import { useTituloDemo } from "@/lib/vagas/use-titulo-demo";
 import { useVagas, type OpcoesVagas } from "@/lib/vagas/use-vagas";
 import { VISUAL } from "@/lib/vagas/visual";
 import { Anunciador, useAnuncios } from "./anunciador";
@@ -37,6 +38,7 @@ export function TelaGuarita(props: OpcoesVagas) {
   const [somBloqueado, ligarSom] = useAvisosFalados(som, bolsoes, situacoes, causa, carregou);
   useTelaAcesa();
   useRecargaDiaria();
+  useTituloDemo(modo, "Guarita");
 
   const demo = modo === "demo";
   const faixaDeAlerta = orientacao.tipo === "sem-dados" || demo;
@@ -109,11 +111,11 @@ export function TelaGuarita(props: OpcoesVagas) {
                 : "listrado-forte border-sem-dados bg-[var(--sem-dados-fundo)]"
         }`}
       >
-        <p className="text-balance text-[var(--text-g-faixa)] font-black leading-tight">{orientacao.texto}</p>
-        {orientacao.especiais && <p className="text-[var(--text-g-detalhe)] font-bold text-[var(--vaga-especial)]">{orientacao.especiais}</p>}
-        <p className={`mt-1 flex items-center gap-2 text-balance text-[var(--text-g-detalhe)] font-semibold ${faixaDeAlerta ? "text-sem-dados" : "text-texto"} ${detalhe ? "" : "invisible"}`}>
+        <p className="text-balance text-g-faixa font-black leading-tight">{orientacao.texto}</p>
+        {orientacao.especiais && <p className="text-g-detalhe font-bold text-[var(--vaga-especial)]">{orientacao.especiais}</p>}
+        <p className={`mt-1 flex items-center gap-2 text-balance text-g-detalhe font-semibold ${faixaDeAlerta ? "text-sem-dados" : "text-texto"} ${detalhe ? "" : "invisible"}`}>
           {detalhe && faixaDeAlerta && <Icone nome="alerta" className="h-[1.2em] w-[1.2em] shrink-0" />}
-          {detalhe ?? " "}
+          {detalhe ?? " "}
         </p>
       </footer>
     </main>
@@ -168,11 +170,11 @@ function ColunaBolsao({
       <div className="flex flex-col items-start gap-[0.4vh]">
         <h2 aria-label={bolsao.nome} className="flex items-baseline gap-[0.3em] leading-none">
           <span className="text-[clamp(0.9rem,1.6vw,1.8rem)] font-bold uppercase text-texto-secundario">Bloco</span>
-          <span data-testid={`letra-${bolsao.id}`} className="text-[var(--text-g-letra)] font-black">
+          <span data-testid={`letra-${bolsao.id}`} className="text-g-letra font-black">
             {bolsao.id}
           </span>
         </h2>
-        <span className={`flex items-center gap-1 text-[var(--text-g-rotulo)] font-bold uppercase ${v.cor}`}>
+        <span className={`flex items-center gap-1 text-g-rotulo font-bold uppercase ${v.cor}`}>
           {v.icone && <Icone nome={v.icone} className="h-[1.2em] w-[1.2em]" />}
           {v.rotulo}
         </span>
@@ -182,21 +184,21 @@ function ColunaBolsao({
         {semDados ? (
           <div data-testid={`centro-${bolsao.id}`} className="flex flex-col items-center">
             <span className={`text-[clamp(2rem,5.5vw,6.5rem)] font-black leading-none ${v.cor}`}>SEM DADOS</span>
-            <span className="mt-[1.5vh] max-w-[22ch] text-balance text-[var(--text-g-rotulo)] font-semibold leading-snug">{avisoColunaSemDados(bolsao, agoraServidorMs, causa, carregou)}</span>
+            <span className="mt-[1.5vh] max-w-[22ch] text-balance text-g-rotulo font-semibold leading-snug">{avisoColunaSemDados(bolsao, agoraServidorMs, causa, carregou)}</span>
             {bolsao.aviso && (
-              <span data-testid={`aviso-manutencao-${bolsao.id}`} className="mt-[1vh] text-[var(--text-g-corpo)] font-semibold text-sem-dados">
+              <span data-testid={`aviso-manutencao-${bolsao.id}`} className="mt-[1vh] text-g-corpo font-semibold text-sem-dados">
                 Aviso da manutenção: {bolsao.aviso}
               </span>
             )}
           </div>
         ) : (
           <div data-testid={`centro-${bolsao.id}`} className="flex flex-col items-center">
-            <span key={livres} data-anim={direcao ?? undefined} className={`text-[var(--text-g-numero)] font-black leading-none tabular-nums ${v.cor} ${direcao ? "pulso" : ""}`}>
+            <span key={livres} data-anim={direcao ?? undefined} className={`text-g-numero font-black leading-none tabular-nums ${v.cor} ${direcao ? "pulso" : ""}`}>
               {livres}
             </span>
             <span className={`text-[clamp(1.1rem,2.2vw,2.6rem)] font-bold leading-tight ${v.cor}`}>{situacao === "lotado" ? "LOTADO" : livres === 1 ? "vaga livre" : "vagas livres"}</span>
             {dados.especiaisLivres > 0 && (
-              <span data-testid={`especiais-extra-${bolsao.id}`} className="text-[var(--text-g-corpo)] font-bold text-[var(--vaga-especial)]">
+              <span data-testid={`especiais-extra-${bolsao.id}`} className="text-g-corpo font-bold text-[var(--vaga-especial)]">
                 +{dados.especiaisLivres} {dados.especiaisLivres === 1 ? "especial" : "especiais"}
               </span>
             )}
@@ -206,15 +208,15 @@ function ColunaBolsao({
 
       <div className="flex h-[12vh] flex-col justify-end gap-[0.8vh]">
         {semDados ? (
-          <p className="text-[var(--text-g-corpo)] text-texto-secundario">{curto}</p>
+          <p className="text-g-corpo text-texto-secundario">{curto}</p>
         ) : (
           <>
             {especiais.length > 0 && (
-              <p data-testid={`especiais-${bolsao.id}`} className="text-balance text-[var(--text-g-legenda)] font-bold text-[var(--vaga-especial)]">
+              <p data-testid={`especiais-${bolsao.id}`} className="text-balance text-g-legenda font-bold text-[var(--vaga-especial)]">
                 {especiais.map(textoEspecial).join(" · ")}
               </p>
             )}
-            <p className="text-[var(--text-g-corpo)] text-texto-secundario">
+            <p className="text-g-corpo text-texto-secundario">
               <span className="font-semibold text-texto">de {dados.total} vagas</span>
               {" · "}atualizado {textoIdade(bolsao, agoraServidorMs)}
             </p>
@@ -237,7 +239,7 @@ function Relogio({ ms }: { ms: number }) {
   const data = texto.charAt(0).toUpperCase() + texto.slice(1);
   return (
     <div className="text-right">
-      <p data-testid="relogio" className="text-[var(--text-g-relogio)] font-black leading-none tabular-nums">
+      <p data-testid="relogio" className="text-g-relogio font-black leading-none tabular-nums">
         {noCliente ? horaCurta(ms) : "--:--"}
       </p>
       <p data-testid="data-hoje" className="text-[clamp(0.9rem,1.5vw,1.8rem)] text-texto-secundario">

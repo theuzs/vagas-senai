@@ -4,7 +4,7 @@ import { ENDERECO_PUBLICO } from "@/lib/endereco";
 import { svgDoQr } from "@/lib/qr";
 
 export const metadata: Metadata = {
-  title: "QR code para a guarita",
+  title: "Folha do QR code",
   robots: { index: false },
 };
 

@@ -48,7 +48,7 @@
 
   /* Escala de texto da tela da guarita (UX-08, UX-29). Lida de 1 a 3 m. */
   --text-g-letra: clamp(4rem, min(6vw, 10vh), 8rem);
-  --text-g-numero: clamp(4rem, 13vw, 15rem);
+  --text-g-numero: clamp(3.5rem, min(13vw, 15vh), 15rem);
   --text-g-faixa: clamp(1.5rem, min(4vw, 7vh), 5rem);
   --text-g-detalhe: clamp(1.1rem, 2.2vw, 2.8rem);
   --text-g-corpo: clamp(1rem, 1.8vw, 2.2rem);

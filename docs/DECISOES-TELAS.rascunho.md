@@ -27,7 +27,7 @@ Rascunho dos registros pedidos pelos itens UX-15, UX-18, UX-54, UX-56, UX-62 e U
 
 ## UX-54: tela de resultados
 
-- **Tela de resultados entra na Onda 3, fora do escopo original** (D21 da lista). O histórico já existia para a banca (decisão 8) e ninguém conseguia vê-lo. `/resultados` lê três funções novas da migration `0002_resultados.sql` (`vagas.resumo_noites`, `vagas.impacto` e `vagas.serie_noite`), em `security definer`, que devolvem só agregados e a série de uma noite; `anon` continua sem ler `vagas.historico`. Toda cifra fica presa à data ("Noite de 13/10") e a tela não usa `useVagas` nem lê `vagas.bolsoes`.
+- **Tela de resultados entra na Onda 3, fora do escopo original** (D21 da lista). O histórico já existia para a banca (decisão 8) e ninguém conseguia vê-lo. `/resultados` lê três funções novas da migration `0003_resultados.sql` (`vagas.resumo_noites`, `vagas.impacto` e `vagas.serie_noite`), em `security definer`, que devolvem só agregados e a série de uma noite; `anon` continua sem ler `vagas.historico`. Toda cifra fica presa à data ("Noite de 13/10") e a tela não usa `useVagas` nem lê `vagas.bolsoes`.
 - Em `vagas.impacto`, "janelas avaliadas" são as janelas com foto de pelo menos dois bolsões, porque só nelas dá para comparar um bolsão com outro. A média de vagas livres "dos outros blocos" é a média, nas janelas que contaram, das vagas livres dos bolsões com foto e com vaga. Bolsão sem foto nunca conta como lotado nem como vaga.
 - O filtro de `publico` (UX-59) ficou de fora das funções, por pedido do Matheus; quem fizer o UX-59 acrescenta `where b.publico` nas três.
 - A página chama as rpc com `fetch` direto e a chave publishable (`src/lib/resultados/fonte-resultados.ts`), sem o supabase-js, porque não precisa de Realtime.
