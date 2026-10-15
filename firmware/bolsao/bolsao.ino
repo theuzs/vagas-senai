@@ -13,6 +13,10 @@
 #include <esp_task_wdt.h>
 #include <esp_system.h>
 
+#if !defined(ESP_ARDUINO_VERSION_MAJOR) || ESP_ARDUINO_VERSION_MAJOR < 3
+#error "Este código precisa da placa esp32 versão 3.x. No Arduino IDE: Ferramentas > Placa > Gerenciador de Placas > esp32 (Espressif) > instale a 3.3.x."
+#endif
+
 // ================= CONFIGURAÇÃO (muda por bolsão) =================
 const char* ID_BOLSAO   = "A";            // "A", "C" ou "H" (tem que existir em vagas.bolsoes)
 const char* NOME_BOLSAO = "Bloco A";

@@ -11,3 +11,8 @@ Registros dos itens de firmware de `docs/MELHORIAS-UX.md` (UX-20 a UX-27, UX-51 
 
 - **A decisão 35 mudou.** O João não confere mais `N_VAGAS`: a quantidade de vagas é o tamanho de `PINO_VAGA` (`const int N_VAGAS = sizeof(PINO_VAGA) / sizeof(PINO_VAGA[0]);`). Com isso, uma lista com menos pinos do que o número declarado não preenche vagas com o GPIO 0. O cabeçalho dos arquivos das placas passou a dizer "Falta conferir PINO_VAGA (um pino por vaga) e preencher o Wi-Fi do campus.".
 - **Pino inválido bloqueia o envio.** Na partida, a placa confere cada pino: inexistente (20, 24, 28 a 31, acima de 39), da flash (6 a 11), da serial (1 e 3) ou repetido. Com erro, ela imprime `[config] A vaga 4 usa o GPIO 6, que é da memória flash. Troque em PINO_VAGA.` a cada 10 s e não chama `publicar()`, então o site mostra SEM DADOS e a página local mostra a situação "config". Os pinos 0, 2, 5, 12 e 15 só geram aviso na partida.
+
+## UX-27 · LEIAME para quem grava e instala a placa
+
+- **Pergunta para o João: existe bolsão com mais de 19 vagas?** Uma placa ESP32 Dev Module tem 19 pinos usáveis como entrada de sensor (15 normais e 4 só de entrada). Com mais vagas, é preciso uma segunda placa no mesmo bolsão ou um expansor de entradas, e o firmware ainda não trata nenhum dos dois.
+- O `bolsao.ino` para a compilação com uma mensagem em português quando a placa esp32 instalada é a 2.x (`#error` logo depois dos includes).
