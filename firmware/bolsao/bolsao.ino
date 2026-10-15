@@ -214,7 +214,7 @@ const char PAGINA[] PROGMEM = R"rawliteral(
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Vagas do Estacionamento</title>
 <style>
-  :root { --bg:#0f1419; --card:#1a212b; --texto:#e8edf2; --suave:#8a96a3; --livre:#22c55e; --ocupada:#ef4444; --offline:#f59e0b; }
+  :root { --bg:#0f1419; --card:#1a212b; --texto:#e8edf2; --suave:#8a96a3; --livre:#22c55e; --ocupada:#ef4444; --offline:#f59e0b; --sem-dados:#fbbf24; --sem-dados-fundo:#2a2a2a; }
   * { box-sizing:border-box; margin:0; padding:0; }
   body { font-family:system-ui,-apple-system,"Segoe UI",sans-serif; background:var(--bg); color:var(--texto); min-height:100vh; padding:24px 16px; display:flex; flex-direction:column; align-items:center; }
   header { text-align:center; margin-bottom:24px; }
@@ -222,9 +222,13 @@ const char PAGINA[] PROGMEM = R"rawliteral(
   header p { color:var(--suave); font-size:.9rem; margin-top:4px; }
   .resumo { background:var(--card); border-radius:20px; padding:24px 40px; text-align:center; margin-bottom:28px; border:2px solid var(--livre); transition:border-color .3s; }
   .resumo.lotado { border-color:var(--ocupada); }
-  .resumo.offline { border-color:var(--offline); }
   .resumo .numero { font-size:4rem; font-weight:700; line-height:1; }
   .resumo .rotulo { color:var(--suave); margin-top:6px; }
+  /* SEM DADOS: borda tracejada, listras e ícone, como no site. Copiado de .listrado em src/app/globals.css. */
+  .resumo.sem-dados { border:2px dashed var(--sem-dados); background-color:var(--sem-dados-fundo); background-image:repeating-linear-gradient(135deg,transparent 0 8px,rgb(255 255 255 / 0.06) 8px 16px); }
+  .resumo.sem-dados .numero { font-size:2rem; color:var(--sem-dados); display:flex; align-items:center; justify-content:center; gap:10px; }
+  .resumo.sem-dados .rotulo { color:var(--texto); }
+  .alerta { width:1.25em; height:1.25em; flex:none; }
   .patio { width:100%; max-width:640px; display:grid; grid-template-columns:repeat(auto-fit,minmax(100px,1fr)); gap:12px; }
   .vaga { background:var(--card); border-radius:14px; padding:20px 8px; text-align:center; border:2px solid transparent; transition:all .3s; }
   .vaga .num { font-size:.8rem; color:var(--suave); margin-bottom:8px; }
@@ -234,45 +238,83 @@ const char PAGINA[] PROGMEM = R"rawliteral(
   .vaga.livre .status { color:var(--livre); }
   .vaga.ocupada { border-color:var(--ocupada); background:#2a1a1d; }
   .vaga.ocupada .status { color:var(--ocupada); }
-  .patio.offline .vaga { opacity:.35; }
   .rodape { margin-top:28px; color:var(--suave); font-size:.8rem; display:flex; align-items:center; gap:8px; }
-  .ponto { width:10px; height:10px; border-radius:50%; background:var(--livre); }
-  .ponto.offline { background:var(--offline); }
+  .ponto { width:10px; height:10px; border-radius:50%; background:var(--livre); flex:none; }
+  .ponto.sem-dados { background:var(--sem-dados); }
 </style>
 </head>
 <body>
   <header><h1 id="titulo">Estacionamento</h1><p>Vagas em tempo real</p></header>
-  <div class="resumo" id="resumo"><div class="numero" id="livres">--</div><div class="rotulo" id="rotulo">vagas livres</div></div>
+  <div class="resumo sem-dados" id="resumo">
+    <div class="numero" id="livres"><svg class="alerta" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 2.5 20h19L12 3Z"/><path d="M12 9v5"/><path d="M12 17.5h.01"/></svg><span>SEM DADOS</span></div>
+    <div class="rotulo" id="rotulo">A página ainda não recebeu dados da placa.</div>
+  </div>
   <div class="patio" id="patio"></div>
-  <div class="rodape"><span class="ponto" id="ponto"></span><span id="atualizado">Conectando...</span></div>
+  <div class="rodape"><span class="ponto sem-dados" id="ponto"></span><span id="atualizado" role="status">A página consulta a placa a cada segundo.</span></div>
 <script>
+  const LIMITE_LOCAL_MS = 20000; // a página fala direto com a placa; 20 s cobre um envio preso e é mais rígido que os 30 s do site
+  const ICONE_ALERTA = '<svg class="alerta" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 2.5 20h19L12 3Z"/><path d="M12 9v5"/><path d="M12 17.5h.01"/></svg>';
   const patio=document.getElementById('patio'),resumo=document.getElementById('resumo'),ponto=document.getElementById('ponto');
-  let ultimoOk=0;
-  function desenhar(d){
-    document.getElementById('titulo').textContent=d.nome;
-    document.getElementById('livres').textContent=d.livres;
-    document.getElementById('rotulo').textContent=d.livres===1?'vaga livre':'vagas livres';
-    resumo.classList.toggle('lotado',d.livres===0);
+  const livresEl=document.getElementById('livres'),rotuloEl=document.getElementById('rotulo'),atualizadoEl=document.getElementById('atualizado');
+  let ultimoDado=null, ultimoOk=null, falhou=false, desenhado=null;
+
+  // Busca separada do desenho: nunca há duas consultas abertas.
+  async function ciclo(){
+    const c = new AbortController();
+    const t = setTimeout(() => c.abort(), 3000);
+    try {
+      const r = await fetch('/status', {cache:'no-store', signal:c.signal});
+      if (!r.ok) throw new Error(r.status);
+      ultimoDado = await r.json();
+      ultimoOk = performance.now();
+      falhou = false;
+      desenhar();
+    } catch (e) {
+      falhou = true;
+      desenhar();
+    } finally {
+      clearTimeout(t);
+      setTimeout(ciclo, 1000);
+    }
+  }
+
+  function texto(el, t){ if (el.textContent !== t) el.textContent = t; }
+
+  function desenharVagas(d){
     patio.innerHTML='';
     d.vagas.forEach((ocupada,i)=>{
       const el=document.createElement('div');
       el.className='vaga '+(ocupada?'ocupada':'livre');
-      el.innerHTML='<div class="num">Vaga '+(i+1)+'</div><div class="icone">'+(ocupada?'🚗':'🅿️')+'</div><div class="status">'+(ocupada?'Ocupada':'Livre')+'</div>';
+      el.innerHTML='<div class="num">Vaga '+(i+1)+'</div><div class="icone" aria-hidden="true">'+(ocupada?'🚗':'🅿️')+'</div><div class="status">'+(ocupada?'Ocupada':'Livre')+'</div>';
       patio.appendChild(el);
     });
-    document.getElementById('atualizado').textContent=d.nuvem?'Atualizando ao vivo · enviando para a nuvem':'Atualizando ao vivo · sem nuvem';
   }
-  async function atualizar(){
-    try{
-      const r=await fetch('/status',{cache:'no-store'});const d=await r.json();desenhar(d);
-      ultimoOk=Date.now();patio.classList.remove('offline');resumo.classList.remove('offline');ponto.classList.remove('offline');
-    }catch(e){
-      patio.classList.add('offline');resumo.classList.add('offline');ponto.classList.add('offline');
-      const s=ultimoOk?Math.round((Date.now()-ultimoOk)/1000):null;
-      document.getElementById('atualizado').textContent=s===null?'Sem conexão com o sensor':'Sem conexão há '+s+'s';
+
+  function desenhar(){
+    const agora = performance.now();
+    const semDados = ultimoOk === null || agora - ultimoOk > LIMITE_LOCAL_MS;
+    const s = ultimoOk === null ? null : Math.round((agora - ultimoOk) / 1000);
+    const semResposta = s === null ? 'A página ainda não recebeu dados da placa.' : 'A placa não responde há ' + s + ' s.';
+    if (semDados) {
+      if (!resumo.classList.contains('sem-dados')) livresEl.innerHTML = ICONE_ALERTA + '<span>SEM DADOS</span>';
+      resumo.className = 'resumo sem-dados';
+      texto(rotuloEl, semResposta);
+      patio.innerHTML = ''; desenhado = null;
+      ponto.className = 'ponto sem-dados';
+      texto(atualizadoEl, semResposta);
+      return;
     }
+    const d = ultimoDado;
+    texto(document.getElementById('titulo'), d.nome);
+    texto(livresEl, String(d.livres));
+    texto(rotuloEl, d.livres === 1 ? 'vaga livre' : 'vagas livres');
+    resumo.className = 'resumo' + (d.livres === 0 ? ' lotado' : '');
+    if (d !== desenhado) { desenharVagas(d); desenhado = d; }
+    ponto.className = 'ponto' + (falhou ? ' sem-dados' : '');
+    texto(atualizadoEl, falhou ? semResposta : 'A página consulta a placa a cada segundo.');
   }
-  atualizar();setInterval(atualizar,1000);
+
+  desenhar(); setInterval(desenhar, 1000); ciclo();
 </script>
 </body>
 </html>
