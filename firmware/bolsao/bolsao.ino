@@ -58,6 +58,7 @@ int   ultimoCodigoHttp = 0;
 // Resultado do último envio, classificado. Vai para o monitor serial e para o /status.
 enum SituacaoEnvio { ENVIO_NENHUM, ENVIO_OK, ENVIO_CHAVE, ENVIO_TOKEN, ENVIO_DADOS, ENVIO_FUNCAO, ENVIO_SCHEMA, ENVIO_PORTAL, ENVIO_SEM_INTERNET, ENVIO_OUTRO };
 SituacaoEnvio situacaoEnvio = ENVIO_NENHUM;
+bool tentouDesdeConexao = false;   // já houve um envio desde que o Wi-Fi conectou
 unsigned long desconectadoDesde = 0;
 unsigned long proximaTentativaWifi = 0;
 unsigned long esperaWifi = 30000;
@@ -173,6 +174,7 @@ void cuidarWifi() {
       Serial.print(", sinal "); Serial.print(rssi); Serial.print(" dBm ("); Serial.print(classeSinal(rssi)); Serial.println(")");
       desconectadoDesde = 0;
       esperaWifi = 30000;
+      tentouDesdeConexao = false;
       motivoImpresso = 0;
       motivoDesconexao = 0;
       motivoWifi = "";
@@ -274,6 +276,7 @@ void publicar() {
   http.addHeader("Authorization", String("Bearer ") + SUPABASE_ANON_KEY);
   http.addHeader("Content-Profile", "vagas");
 
+  tentouDesdeConexao = true;
   unsigned long t0 = millis();
   int codigo = http.POST(montarPayload());
   String corpo = http.getString();
@@ -326,14 +329,18 @@ const char PAGINA[] PROGMEM = R"rawliteral(
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Vagas do Estacionamento</title>
+<title>Placa do estacionamento</title>
 <style>
   :root { --bg:#0f1419; --card:#1a212b; --texto:#e8edf2; --suave:#8a96a3; --livre:#22c55e; --ocupada:#ef4444; --offline:#f59e0b; --sem-dados:#fbbf24; --sem-dados-fundo:#2a2a2a; }
   * { box-sizing:border-box; margin:0; padding:0; }
   body { font-family:system-ui,-apple-system,"Segoe UI",sans-serif; background:var(--bg); color:var(--texto); min-height:100vh; padding:24px 16px; display:flex; flex-direction:column; align-items:center; }
-  header { text-align:center; margin-bottom:24px; }
+  header { text-align:center; margin-bottom:16px; }
   header h1 { font-size:1.4rem; font-weight:600; }
   header p { color:var(--suave); font-size:.9rem; margin-top:4px; }
+  .faixa { width:100%; max-width:640px; border:2px solid var(--sem-dados); border-radius:12px; padding:10px 12px; margin-bottom:20px; display:flex; gap:10px; align-items:flex-start; color:var(--sem-dados); font-size:.95rem; line-height:1.35; }
+  .faixa.ok { border-color:var(--livre); color:var(--livre); }
+  .faixa .icone-faixa { width:1.4em; height:1.4em; flex:none; margin-top:.05em; }
+  .faixa p + p { color:var(--texto); margin-top:4px; }
   .resumo { background:var(--card); border-radius:20px; padding:24px 40px; text-align:center; margin-bottom:28px; border:2px solid var(--livre); transition:border-color .3s; }
   .resumo.lotado { border-color:var(--ocupada); }
   .resumo .numero { font-size:4rem; font-weight:700; line-height:1; }
@@ -352,24 +359,38 @@ const char PAGINA[] PROGMEM = R"rawliteral(
   .vaga.livre .status { color:var(--livre); }
   .vaga.ocupada { border-color:var(--ocupada); background:#2a1a1d; }
   .vaga.ocupada .status { color:var(--ocupada); }
-  .rodape { margin-top:28px; color:var(--suave); font-size:.8rem; display:flex; align-items:center; gap:8px; }
+  .detalhes { width:100%; max-width:640px; margin-top:28px; background:var(--card); border-radius:14px; padding:14px 16px; font-size:.9rem; }
+  .detalhes h2 { font-size:1rem; font-weight:600; margin-bottom:8px; }
+  .detalhes h2 span { color:var(--suave); font-weight:400; }
+  .detalhes li { list-style:none; padding:3px 0; color:var(--suave); }
+  .detalhes li b { color:var(--texto); font-weight:500; }
+  .rodape { margin-top:20px; color:var(--suave); font-size:.8rem; display:flex; align-items:center; gap:8px; }
   .ponto { width:10px; height:10px; border-radius:50%; background:var(--livre); flex:none; }
   .ponto.sem-dados { background:var(--sem-dados); }
 </style>
 </head>
 <body>
-  <header><h1 id="titulo">Estacionamento</h1><p>Vagas em tempo real</p></header>
+  <header><h1 id="titulo">Placa do estacionamento</h1><p>Página local da placa. Os motoristas usam vagas.rubysistemas.com.br.</p></header>
+  <div class="faixa" id="faixa" aria-live="polite"><svg class="icone-faixa" id="faixa-icone" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 2.5 20h19L12 3Z"/><path d="M12 9v5"/><path d="M12 17.5h.01"/></svg><div><p id="faixa-texto">A página ainda não recebeu dados da placa.</p><p id="faixa-extra" hidden></p></div></div>
   <div class="resumo sem-dados" id="resumo">
     <div class="numero" id="livres"><svg class="alerta" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 2.5 20h19L12 3Z"/><path d="M12 9v5"/><path d="M12 17.5h.01"/></svg><span>SEM DADOS</span></div>
     <div class="rotulo" id="rotulo">A página ainda não recebeu dados da placa.</div>
   </div>
   <div class="patio" id="patio"></div>
+  <section class="detalhes" id="detalhes" hidden>
+    <h2>Detalhes da placa <span id="detalhes-idade"></span></h2>
+    <ul id="detalhes-lista"></ul>
+  </section>
   <div class="rodape"><span class="ponto sem-dados" id="ponto"></span><span id="atualizado" role="status">A página consulta a placa a cada segundo.</span></div>
 <script>
   const LIMITE_LOCAL_MS = 20000; // a página fala direto com a placa; 20 s cobre um envio preso e é mais rígido que os 30 s do site
-  const ICONE_ALERTA = '<svg class="alerta" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 2.5 20h19L12 3Z"/><path d="M12 9v5"/><path d="M12 17.5h.01"/></svg>';
+  const ALERTA = '<path d="M12 3 2.5 20h19L12 3Z"/><path d="M12 9v5"/><path d="M12 17.5h.01"/>';
+  const CERTO = '<path d="M4 12.5 9.5 18 20 6.5"/>';
+  const ICONE_ALERTA = '<svg class="alerta" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">' + ALERTA + '</svg>';
   const patio=document.getElementById('patio'),resumo=document.getElementById('resumo'),ponto=document.getElementById('ponto');
   const livresEl=document.getElementById('livres'),rotuloEl=document.getElementById('rotulo'),atualizadoEl=document.getElementById('atualizado');
+  const faixa=document.getElementById('faixa'),faixaTexto=document.getElementById('faixa-texto'),faixaExtra=document.getElementById('faixa-extra'),faixaIcone=document.getElementById('faixa-icone');
+  const detalhes=document.getElementById('detalhes'),detalhesLista=document.getElementById('detalhes-lista'),detalhesIdade=document.getElementById('detalhes-idade');
   let ultimoDado=null, ultimoOk=null, falhou=false, desenhado=null;
 
   // Busca separada do desenho: nunca há duas consultas abertas.
@@ -393,6 +414,53 @@ const char PAGINA[] PROGMEM = R"rawliteral(
   }
 
   function texto(el, t){ if (el.textContent !== t) el.textContent = t; }
+  function classe(el, c){ if (el.className !== c) el.className = c; }
+  function sinalTexto(d){ return d.wifi ? 'sinal ' + (d.sinal >= -67 ? 'bom' : d.sinal >= -80 ? 'fraco' : 'muito fraco') + ' (' + d.sinal + ' dBm)' : 'sem conexão'; }
+  function duracao(s){
+    if (s < 60) return s + ' s';
+    const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60);
+    return h > 0 ? h + ' h ' + m + ' min' : m + ' min';
+  }
+
+  // Texto da faixa para cada valor de "envio" do /status.
+  function textoFaixa(d){
+    switch (d.envio) {
+      case 'config': return d.config ? d.config : 'Falta preencher o Wi-Fi do campus no arquivo da placa.';
+      case 'sem_wifi': return 'A placa está sem o Wi-Fi do campus. Motivo: ' + (d.motivo_wifi || 'ainda procurando a rede') + '. Ela tenta de novo sozinha.';
+      case 'aguardando': return 'A placa entrou no Wi-Fi. O próximo envio sai em até 10 s.';
+      case 'ok': return 'A placa está enviando para o site. O último envio foi há ' + d.ultimo_ok_s + ' s.';
+      case 'chave': return 'O site recusou a chave do Supabase (401). Peça ao Matheus um arquivo novo.';
+      case 'token': return 'O site recusou o token desta placa (403). Avise o Matheus.';
+      case 'dados': return 'O banco recusou os dados (400). Confira ID_BOLSAO no arquivo.';
+      case 'funcao': return 'O site não achou a função de envio (404). Avise o Matheus.';
+      case 'schema': return 'O site não liberou o schema vagas (406). Avise o Matheus.';
+      case 'portal': return 'A rede pediu login no navegador. Peça à TI para liberar o MAC ' + d.mac + '.';
+      case 'sem_internet': return 'A placa tem Wi-Fi, mas o site não respondeu. Confira se a rede libera a internet.';
+      default: return 'O último envio certo foi há ' + (d.ultimo_ok_s >= 0 ? d.ultimo_ok_s + ' s' : 'mais de um dia') + '. Avise o Matheus.';
+    }
+  }
+
+  function mostrarFaixa(ok, principal, extra){
+    classe(faixa, 'faixa' + (ok ? ' ok' : ''));
+    const icone = ok ? CERTO : ALERTA;
+    if (faixaIcone.innerHTML !== icone) faixaIcone.innerHTML = icone;
+    texto(faixaTexto, principal);
+    if (extra) { texto(faixaExtra, extra); faixaExtra.hidden = false; } else { faixaExtra.hidden = true; texto(faixaExtra, ''); }
+  }
+
+  function desenharDetalhes(d){
+    const itens = [
+      ['Wi-Fi do campus', d.rede + ' · ' + sinalTexto(d)],
+      ['IP da placa', d.ip || 'sem IP'],
+      ['MAC (a TI libera este)', d.mac],
+      ['Ligada há', duracao(d.ligada_s)],
+      ['Último reinício', d.reinicio],
+      ['Firmware', d.versao]
+    ];
+    detalhesLista.innerHTML = itens.map(i => '<li>' + i[0] + ': <b></b></li>').join('');
+    detalhesLista.querySelectorAll('b').forEach((b, i) => { b.textContent = itens[i][1]; });
+    detalhes.hidden = false;
+  }
 
   function desenharVagas(d){
     patio.innerHTML='';
@@ -411,20 +479,26 @@ const char PAGINA[] PROGMEM = R"rawliteral(
     const semResposta = s === null ? 'A página ainda não recebeu dados da placa.' : 'A placa não responde há ' + s + ' s.';
     if (semDados) {
       if (!resumo.classList.contains('sem-dados')) livresEl.innerHTML = ICONE_ALERTA + '<span>SEM DADOS</span>';
-      resumo.className = 'resumo sem-dados';
+      classe(resumo, 'resumo sem-dados');
       texto(rotuloEl, semResposta);
       patio.innerHTML = ''; desenhado = null;
-      ponto.className = 'ponto sem-dados';
+      classe(ponto, 'ponto sem-dados');
       texto(atualizadoEl, semResposta);
+      mostrarFaixa(false, semResposta, null);
+      if (ultimoDado) texto(detalhesIdade, '(dados de ' + s + ' s atrás)');
       return;
     }
     const d = ultimoDado;
     texto(document.getElementById('titulo'), d.nome);
+    if (document.title !== 'Placa do ' + d.nome) document.title = 'Placa do ' + d.nome;
     texto(livresEl, String(d.livres));
     texto(rotuloEl, d.livres === 1 ? 'vaga livre' : 'vagas livres');
-    resumo.className = 'resumo' + (d.livres === 0 ? ' lotado' : '');
-    if (d !== desenhado) { desenharVagas(d); desenhado = d; }
-    ponto.className = 'ponto' + (falhou ? ' sem-dados' : '');
+    classe(resumo, 'resumo' + (d.livres === 0 ? ' lotado' : ''));
+    if (d !== desenhado) { desenharVagas(d); desenharDetalhes(d); desenhado = d; }
+    texto(detalhesIdade, '');
+    const ok = d.envio === 'ok';
+    mostrarFaixa(ok, textoFaixa(d), ok ? null : 'Enquanto isso, o site mostra SEM DADOS para o ' + d.nome + '.');
+    classe(ponto, 'ponto' + (falhou ? ' sem-dados' : ''));
     texto(atualizadoEl, falhou ? semResposta : 'A página consulta a placa a cada segundo.');
   }
 
@@ -436,9 +510,43 @@ const char PAGINA[] PROGMEM = R"rawliteral(
 
 void paginaInicial() { server.send(200, "text/html", PAGINA); }
 
+// Texto do campo "envio" do /status. A ordem importa: config, sem_wifi, aguardando, ok, resto.
+const char* textoEnvio() {
+  if (faltaConfig || erroConfig.length() > 0) return "config";
+  if (WiFi.status() != WL_CONNECTED) return "sem_wifi";
+  if (!tentouDesdeConexao) return "aguardando";
+  // 30 s, igual ao LIMITE_FRESCOR_MS do site; não use só ultimoCodigoHttp, ele não muda quando o Wi-Fi cai
+  if (envioOk && millis() - ultimoEnvioOk < 30000) return "ok";
+  switch (situacaoEnvio) {
+    case ENVIO_CHAVE: return "chave";
+    case ENVIO_TOKEN: return "token";
+    case ENVIO_DADOS: return "dados";
+    case ENVIO_FUNCAO: return "funcao";
+    case ENVIO_SCHEMA: return "schema";
+    case ENVIO_PORTAL: return "portal";
+    case ENVIO_SEM_INTERNET: return "sem_internet";
+    case ENVIO_NENHUM: return "aguardando";
+    default: return "outro";
+  }
+}
+
+// Escapa aspas e barras para o JSON.
+String jsonTexto(const String& t) {
+  String r = "\"";
+  for (unsigned int i = 0; i < t.length(); i++) {
+    char c = t[i];
+    if (c == '"' || c == '\\') r += '\\';
+    r += c;
+  }
+  r += "\"";
+  return r;
+}
+
+// Senha, token e chave nunca entram aqui.
 void statusJson() {
-  String json = "{\"bolsao\":\"" + String(ID_BOLSAO) + "\"";
-  json += ",\"nome\":\"" + String(NOME_BOLSAO) + "\"";
+  bool wifi = WiFi.status() == WL_CONNECTED;
+  String json = "{\"bolsao\":" + jsonTexto(ID_BOLSAO);
+  json += ",\"nome\":" + jsonTexto(NOME_BOLSAO);
   json += ",\"vagas\":[";
   for (int i = 0; i < N_VAGAS; i++) {
     json += estado[i] ? "true" : "false";
@@ -446,7 +554,25 @@ void statusJson() {
   }
   json += "],\"livres\":" + String(contarLivres());
   json += ",\"nuvem\":" + String(envioOk && millis() - ultimoEnvioOk < 30000 ? "true" : "false");
-  json += ",\"http\":" + String(ultimoCodigoHttp) + "}";
+  json += ",\"http\":" + String(ultimoCodigoHttp);
+  json += ",\"envio\":" + jsonTexto(textoEnvio());
+  json += ",\"wifi\":" + String(wifi ? "true" : "false");
+  json += ",\"rede\":" + jsonTexto(WIFI_SSID);
+  json += ",\"sinal\":" + String(wifi ? WiFi.RSSI() : 0);
+  json += ",\"ip\":" + jsonTexto(wifi ? WiFi.localIP().toString() : String(""));
+  json += ",\"mac\":" + jsonTexto(WiFi.macAddress());
+  json += ",\"motivo_wifi\":" + jsonTexto(motivoWifi);
+  json += ",\"ultimo_ok_s\":" + String(ultimoEnvioOk == 0 ? -1 : (long)((millis() - ultimoEnvioOk) / 1000));
+  json += ",\"ligada_s\":" + String(millis() / 1000);
+  json += ",\"reinicio\":" + jsonTexto(textoReinicio);
+  json += ",\"versao\":" + jsonTexto(VERSAO_FIRMWARE);
+  json += ",\"config\":" + jsonTexto(erroConfig);
+  json += ",\"pinos\":[";
+  for (int i = 0; i < N_VAGAS; i++) {
+    json += String(PINO_VAGA[i]);
+    if (i < N_VAGAS - 1) json += ",";
+  }
+  json += "]}";
   server.sendHeader("Cache-Control", "no-store");
   server.send(200, "application/json", json);
 }

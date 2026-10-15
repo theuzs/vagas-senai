@@ -29,6 +29,19 @@ export interface StatusPlaca {
   livres: number;
   nuvem: boolean;
   http: number;
+  envio: string;
+  wifi: boolean;
+  rede: string;
+  sinal: number;
+  ip: string;
+  mac: string;
+  motivo_wifi: string;
+  ultimo_ok_s: number;
+  ligada_s: number;
+  reinicio: string;
+  versao: string;
+  config: string;
+  pinos: number[];
   [campo: string]: unknown;
 }
 
@@ -41,6 +54,19 @@ export function status(extra: Partial<StatusPlaca> = {}): StatusPlaca {
     livres: vagas.filter((v) => !v).length,
     nuvem: true,
     http: 200,
+    envio: "ok",
+    wifi: true,
+    rede: "SENAI-IOT",
+    sinal: -61,
+    ip: "10.20.4.37",
+    mac: "24:6F:28:AA:BB:CC",
+    motivo_wifi: "",
+    ultimo_ok_s: 3,
+    ligada_s: 11520,
+    reinicio: "ligou na energia",
+    versao: "2026-10-15",
+    config: "",
+    pinos: vagas.map((_, i) => 32 + i),
     ...extra,
   };
 }
@@ -173,5 +199,90 @@ test.describe("página local da placa: sem número velho", () => {
     await expect(page.locator("#livres")).toHaveText("3");
     await page.clock.runFor(5000);
     expect(contagem.foraDaPlaca).toBe(0);
+  });
+});
+
+test.describe("página local da placa: diagnóstico", () => {
+  const casos: { envio: string; extra?: Partial<StatusPlaca>; texto: string }[] = [
+    { envio: "config", texto: "Falta preencher o Wi-Fi do campus no arquivo da placa." },
+    { envio: "config", extra: { config: "A vaga 4 usa o GPIO 6, que é da memória flash. Troque em PINO_VAGA." }, texto: "A vaga 4 usa o GPIO 6, que é da memória flash. Troque em PINO_VAGA." },
+    { envio: "sem_wifi", extra: { wifi: false, sinal: 0, ip: "", motivo_wifi: "a rede recusou a senha" }, texto: "A placa está sem o Wi-Fi do campus. Motivo: a rede recusou a senha. Ela tenta de novo sozinha." },
+    { envio: "aguardando", texto: "A placa entrou no Wi-Fi. O próximo envio sai em até 10 s." },
+    { envio: "ok", extra: { ultimo_ok_s: 4 }, texto: "A placa está enviando para o site. O último envio foi há 4 s." },
+    { envio: "chave", texto: "O site recusou a chave do Supabase (401). Peça ao Matheus um arquivo novo." },
+    { envio: "token", texto: "O site recusou o token desta placa (403). Avise o Matheus." },
+    { envio: "dados", texto: "O banco recusou os dados (400). Confira ID_BOLSAO no arquivo." },
+    { envio: "funcao", texto: "O site não achou a função de envio (404). Avise o Matheus." },
+    { envio: "schema", texto: "O site não liberou o schema vagas (406). Avise o Matheus." },
+    { envio: "portal", texto: "A rede pediu login no navegador. Peça à TI para liberar o MAC 24:6F:28:AA:BB:CC." },
+    { envio: "sem_internet", texto: "A placa tem Wi-Fi, mas o site não respondeu. Confira se a rede libera a internet." },
+    { envio: "outro", extra: { ultimo_ok_s: 95 }, texto: "O último envio certo foi há 95 s. Avise o Matheus." },
+  ];
+  for (const caso of casos) {
+    test(`faixa com envio "${caso.envio}"${caso.extra?.config ? " e erro de pino" : ""}`, async ({ page }) => {
+      await abrirPagina(page, responderCom(status({ envio: caso.envio, ...caso.extra })));
+      await expect(page.locator("#faixa-texto")).toHaveText(caso.texto);
+      const extra = page.locator("#faixa-extra");
+      if (caso.envio === "ok") {
+        await expect(page.locator("#faixa")).toHaveClass(/ok/);
+        await expect(extra).toBeHidden();
+      } else {
+        await expect(page.locator("#faixa")).not.toHaveClass(/ok/);
+        await expect(extra).toHaveText("Enquanto isso, o site mostra SEM DADOS para o Bloco A.");
+      }
+    });
+  }
+
+  test("token recusado e placa sem Wi-Fi não ficam iguais", async ({ page }) => {
+    await abrirPagina(page, responderCom(status({ envio: "token" })));
+    const comToken = await page.locator("#faixa").textContent();
+    await page.reload();
+    await page.route(`${ORIGEM}/status`, responderCom(status({ envio: "sem_wifi", wifi: false, sinal: 0, ip: "", motivo_wifi: "a rede SENAI-IOT não foi encontrada. Confira o nome. A placa só pega 2,4 GHz" })));
+    await page.reload();
+    await expect(page.locator("#faixa-texto")).toContainText("sem o Wi-Fi do campus");
+    const semWifi = await page.locator("#faixa").textContent();
+    expect(comToken).not.toEqual(semWifi);
+    await expect(page.locator("#detalhes")).toContainText("sem conexão");
+  });
+
+  test("sem Wi-Fi, mesmo com http 200 guardado, não diz que está enviando", async ({ page }) => {
+    await abrirPagina(page, responderCom(status({ envio: "sem_wifi", wifi: false, nuvem: false, http: 200 })));
+    await expect(page.locator("#faixa-texto")).toContainText("sem o Wi-Fi do campus");
+    await expect(page.locator("#faixa")).not.toContainText("enviando para o site");
+  });
+
+  test("título, subtítulo e detalhes da placa", async ({ page }) => {
+    await abrirPagina(page, pendurar);
+    await expect(page).toHaveTitle("Placa do estacionamento");
+    await expect(page.locator("header p")).toHaveText("Página local da placa. Os motoristas usam vagas.rubysistemas.com.br.");
+    await page.route(`${ORIGEM}/status`, responderCom(status({ sinal: -71 })));
+    await page.clock.runFor(4000);
+    await expect(page).toHaveTitle("Placa do Bloco A");
+    await expect(page.locator("#titulo")).toHaveText("Bloco A");
+    const detalhes = page.locator("#detalhes");
+    await expect(detalhes).toContainText("Wi-Fi do campus: SENAI-IOT · sinal fraco (-71 dBm)");
+    await expect(detalhes).toContainText("IP da placa: 10.20.4.37");
+    await expect(detalhes).toContainText("MAC (a TI libera este): 24:6F:28:AA:BB:CC");
+    await expect(detalhes).toContainText("Ligada há: 3 h 12 min");
+    await expect(detalhes).toContainText("Último reinício: ligou na energia");
+    await expect(detalhes).toContainText("Firmware: 2026-10-15");
+    await expect(page.locator("#faixa")).toHaveAttribute("aria-live", "polite");
+
+    await page.route(`${ORIGEM}/status`, abortar);
+    await page.clock.runFor(25000);
+    await esperarSemDados(page);
+    await expect(detalhes).toContainText(/\(dados de \d+ s atrás\)/);
+    await expect(page.locator("#faixa-texto")).toContainText(/A placa não responde há \d+ s\./);
+  });
+
+  test("statusJson não cita senha, token, chave nem o MAC do softAP", () => {
+    const ino = readFileSync(join(process.cwd(), "firmware", "bolsao", "bolsao.ino"), "utf8");
+    const ini = ino.indexOf("void statusJson()");
+    const fim = ino.indexOf("\n}\n", ini);
+    expect(ini).toBeGreaterThan(0);
+    const corpo = ino.slice(ini, fim);
+    for (const proibido of ["TOKEN_CENTRAL", "WIFI_SENHA", "SUPABASE_ANON_KEY", "softAPmacAddress", "AP_SENHA"]) {
+      expect(corpo, proibido).not.toContain(proibido);
+    }
   });
 });
