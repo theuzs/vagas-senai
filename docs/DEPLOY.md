@@ -81,10 +81,24 @@ A tela do vigia fica em `https://vagas.rubysistemas.com.br/guarita`.
 2. Para abrir sozinha ao ligar o PC: `Win+R`, digite `shell:startup` e copie o atalho para essa pasta.
 3. Em Configurações → Sistema → Energia, ponha "Desligar a tela" e "Suspender" em **Nunca**. A página também pede ao navegador para não apagar a tela, mas a configuração do Windows manda.
 4. Sem o modo quiosque, a página mostra um botão "Abrir em tela cheia".
+5. Imprima `https://vagas.rubysistemas.com.br/guarita/guia`, escreva o contato do responsável pelos sensores e cole ao lado do monitor.
 
 ## 8. QR code na guarita
 
-Abra `https://vagas.rubysistemas.com.br/qr` e imprima (a página já vem em A4). Cole na guarita e, se quiser, nas entradas dos bolsões.
+Abra `https://vagas.rubysistemas.com.br/qr` e toque em "Imprimir esta folha" (a página já vem em A4, numa página só; na janela de impressão, escolha papel A4 e escala 100 %). Imprima em papel fosco ou plastifique com plástico fosco: o brilho atrapalha a câmera à noite. Cole na guarita e nas entradas dos estacionamentos com o centro do QR entre 1,0 e 1,3 m do chão, na altura dos olhos de quem está no carro. A folha impressa antes de 15/10/2026 tinha um QR menor e precisa ser impressa de novo.
+
+Para as salas de aula, abra `https://vagas.rubysistemas.com.br/qr/sala`: é a mesma folha, com instruções para adicionar a página à tela inicial do celular.
+
+## 9. Resultados para a banca
+
+A tela `https://vagas.rubysistemas.com.br/resultados` mostra, noite a noite, quantas vezes um bloco lotou enquanto outro tinha vaga. Ela lê as funções `vagas.resumo_noites`, `vagas.impacto` e `vagas.serie_noite` da migration `0002_resultados.sql` (aplique com `npm run db:aplicar`).
+
+Antes da banca, confira desde quando há fotos e apague as anteriores à instalação das placas, para o simulador e os testes não entrarem na conta:
+
+```sql
+select min(momento), count(*) from vagas.historico;
+delete from vagas.historico where momento < '2026-11-01 00:00-03';  -- troque pela data da instalação
+```
 
 ## Se algo der errado
 
