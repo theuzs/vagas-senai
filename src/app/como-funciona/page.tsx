@@ -76,7 +76,7 @@ export default function PaginaComoFunciona() {
       </Secao>
 
       <Secao id="quem-fez" titulo="Quem fez">
-        <p>Sensores e placas: João Victor Fagundes Miranda, aluno de Desenvolvimento de Sistemas do SENAI Blumenau. Site e banco de dados: Matheus Fagundes.</p>
+        <p>Sensores e placas: João Victor Fagundes Miranda, aluno de Desenvolvimento de Sistemas do SENAI Itumbiara. Site e banco de dados: Matheus Fagundes.</p>
       </Secao>
 
       <Secao id="veja" titulo="Veja funcionando">
