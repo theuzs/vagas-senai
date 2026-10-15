@@ -43,7 +43,7 @@ const ESTADOS = [
 export default function PaginaGuia() {
   return (
     <Folha testId="folha-guia">
-      <h1 className="text-[40px] font-black leading-tight">Como usar a tela de vagas</h1>
+      <h1 className="text-[30px] font-black leading-tight sm:text-[40px] print:text-[40px]">Como usar a tela de vagas</h1>
 
       <ol className="flex w-full flex-col gap-5 text-left">
         {ESTADOS.map((e) => (

@@ -89,6 +89,17 @@ Abra `https://vagas.rubysistemas.com.br/qr` e toque em "Imprimir esta folha" (a 
 
 Para as salas de aula, abra `https://vagas.rubysistemas.com.br/qr/sala`: é a mesma folha, com instruções para adicionar a página à tela inicial do celular.
 
+## 9. Resultados para a banca
+
+A tela `https://vagas.rubysistemas.com.br/resultados` mostra, noite a noite, quantas vezes um bloco lotou enquanto outro tinha vaga. Ela lê as funções `vagas.resumo_noites`, `vagas.impacto` e `vagas.serie_noite` da migration `0002_resultados.sql` (aplique com `npm run db:aplicar`).
+
+Antes da banca, confira desde quando há fotos e apague as anteriores à instalação das placas, para o simulador e os testes não entrarem na conta:
+
+```sql
+select min(momento), count(*) from vagas.historico;
+delete from vagas.historico where momento < '2026-11-01 00:00-03';  -- troque pela data da instalação
+```
+
 ## Se algo der errado
 
 | Sintoma | Causa provável |
