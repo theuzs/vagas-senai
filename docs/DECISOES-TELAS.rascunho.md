@@ -34,3 +34,9 @@ Rascunho dos registros pedidos pelos itens UX-15, UX-18, UX-54, UX-56, UX-62 e U
 - O gráfico (`grafico-noite.tsx`) é um SVG por bloco, com a linha quebrada onde falta foto e uma faixa hachurada "sem dados" no lugar. Um SVG por bloco evita faixas sobrepostas quando dois blocos ficam sem foto em horas diferentes.
 - O CSV usa ponto e vírgula e a hora local de São Paulo na coluna `momento` ("18:05"), porque a coluna `noite` já traz a data e a planilha fica legível.
 - O link "Resultados" no rodapé de `/` fica por conta de quem mexe em `src/app/page.tsx`.
+
+## UX-64: enviar o link e folha de QR para salas
+
+- `EnviarLink` (`src/components/enviar-link.tsx`) usa `navigator.share` com título, texto e o endereço público; sem `share` (ou se a folha de compartilhar falhar), copia o endereço e mostra "Link copiado." por 3 s numa região `aria-live`. O endereço é sempre `ENDERECO_PUBLICO`, nunca o da aba (que pode ter `?demo=1`).
+- O botão entra no rodapé de `/` por quem mexe em `src/app/page.tsx`: `import { EnviarLink } from "@/components/enviar-link";` e `<EnviarLink />` dentro do `<footer>`. Os E2E de `tests/e2e/qr.spec.ts` que clicam no botão ficam pulados ("skipped") até o botão existir.
+- `/qr/sala` é a mesma folha A4 do `/qr`, com o QR de 140 mm, o título "Veja as vagas livres antes de chegar ao SENAI" e o passo a passo para adicionar a página à tela inicial no Android e no iPhone. Fica fora dos buscadores.
