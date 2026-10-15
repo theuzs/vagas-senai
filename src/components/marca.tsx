@@ -1,0 +1,11 @@
+/** A marca do sistema (o mesmo desenho de public/icone.svg), decorativa. */
+export function Marca({ className = "h-6 w-6" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 512 512" aria-hidden="true" data-testid="marca" className={className}>
+      <rect width="512" height="512" rx="96" fill="#0f1419" />
+      <rect x="56" y="56" width="400" height="400" rx="72" fill="#182028" stroke="#2c3a47" strokeWidth="12" />
+      <path d="M168 400V112h112c62 0 104 40 104 94s-42 94-104 94h-54v100Zm58-152h52c30 0 48-18 48-42s-18-42-48-42h-52Z" fill="#eef3f7" />
+      <circle cx="380" cy="380" r="46" fill="#22c55e" />
+    </svg>
+  );
+}

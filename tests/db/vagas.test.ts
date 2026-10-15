@@ -26,7 +26,7 @@ async function codigoDoErro(p: Promise<unknown>): Promise<string | undefined> {
 describe("migration e seed", () => {
   it("cria os três bolsões sem estado", async () => {
     const linhas = await sql<{ id: string; nome: string; ordem: number; vagas_livres: number | null; atualizado_em: Date | null }[]>`
-      select id, nome, ordem, vagas_livres, atualizado_em from vagas.bolsoes order by ordem`;
+      select id, nome, ordem, vagas_livres, atualizado_em from vagas.bolsoes where publico order by ordem`;
     expect(linhas.map((l) => [l.id, l.nome, l.ordem])).toEqual([
       ["A", "Bloco A", 1],
       ["C", "Bloco C", 2],
@@ -51,7 +51,7 @@ describe("migration e seed", () => {
 
 describe("permissões", () => {
   it("anon lê bolsoes", async () => {
-    const r = await como(sql, "anon", (tx) => tx`select id from vagas.bolsoes`);
+    const r = await como(sql, "anon", (tx) => tx`select id from vagas.bolsoes where publico`);
     expect(r.length).toBe(3);
   });
 
@@ -68,7 +68,7 @@ describe("permissões", () => {
   });
 
   it("authenticated tem as mesmas portas que anon", async () => {
-    const r = await como(sql, "authenticated", (tx) => tx`select id from vagas.bolsoes`);
+    const r = await como(sql, "authenticated", (tx) => tx`select id from vagas.bolsoes where publico`);
     expect(r.length).toBe(3);
     expect(await codigoDoErro(como(sql, "authenticated", (tx) => tx`update vagas.bolsoes set vagas_livres = 1`))).toBe("42501");
     expect(await codigoDoErro(como(sql, "authenticated", (tx) => tx`select * from vagas.centrais`))).toBe("42501");

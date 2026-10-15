@@ -1,9 +1,10 @@
 @import "tailwindcss";
 
 /*
- * Tema escuro por padrão: o uso é à noite, muitas vezes no celular dentro do carro.
- * As cores de estado (livre, poucas, lotado, sem dados) nunca são o único sinal:
- * texto, ícone e listras acompanham.
+ * Tema escuro sempre (decisão D18): o uso é à noite, muitas vezes no celular dentro
+ * do carro, e a tela da guarita fica ligada no escuro. As cores de estado (livre,
+ * poucas, lotado, sem dados) nunca são o único sinal: texto, ícone e listras acompanham.
+ * Os pares de cor têm teste de contraste em src/app/contraste.test.ts.
  */
 :root {
   --fundo: #0f1419;
@@ -18,11 +19,13 @@
   --livre-fundo: #0f2f1c;
   --poucas: #f59e0b;
   --poucas-fundo: #3a2a06;
-  --lotado: #ef4444;
+  --lotado: #f87171;
   --lotado-fundo: #3b1111;
   --sem-dados: #fbbf24;
   --sem-dados-fundo: #2a2a2a;
-  --vaga-ocupada: #566270;
+  --demo: #c4b5fd;
+  --demo-fundo: #241a3d;
+  --vaga-ocupada: #6b7785;
   --vaga-livre: #22c55e;
   --vaga-especial: #60a5fa;
   --vaga-neutra: #2c3a47;
@@ -40,8 +43,22 @@
   --color-poucas: var(--poucas);
   --color-lotado: var(--lotado);
   --color-sem-dados: var(--sem-dados);
-  --font-sans: var(--font-inter), system-ui, sans-serif;
+  --color-demo: var(--demo);
+  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+
+  /* Escala de texto da tela da guarita (UX-08, UX-29). Lida de 1 a 3 m. */
+  --text-g-letra: clamp(4rem, min(6vw, 10vh), 8rem);
+  --text-g-numero: clamp(4rem, 13vw, 15rem);
+  --text-g-faixa: clamp(1.5rem, min(4vw, 7vh), 5rem);
+  --text-g-detalhe: clamp(1.1rem, 2.2vw, 2.8rem);
+  --text-g-corpo: clamp(1rem, 1.8vw, 2.2rem);
+  --text-g-rotulo: clamp(1rem, 2vw, 2.4rem);
+  --text-g-relogio: clamp(2.2rem, 4.6vw, 5.5rem);
+  --text-g-legenda: clamp(0.9rem, 1.5vw, 1.8rem);
 }
+
+/* Telas baixas (zoom ou escala do Windows): a guarita ganha rolagem (UX-32). */
+@custom-variant baixa (@media (max-height: 599px));
 
 html {
   color-scheme: dark;
@@ -61,14 +78,49 @@ body {
 
 /* Fundo listrado do estado SEM DADOS: lê sem depender de cor. */
 .listrado {
-  background-image: repeating-linear-gradient(
-    135deg,
-    transparent 0 8px,
-    rgb(255 255 255 / 0.06) 8px 16px
-  );
+  background-image: repeating-linear-gradient(135deg, transparent 0 8px, rgb(255 255 255 / 0.06) 8px 16px);
 }
 
-/* Número pulsa de leve quando muda. Quem pediu menos movimento não vê. */
+/* Listras largas da guarita, visíveis a 3 m (UX-30). */
+.listrado-forte {
+  background-image: repeating-linear-gradient(135deg, transparent 0 18px, rgb(255 255 255 / 0.1) 18px 36px);
+}
+
+/* Seção destacada depois do toque no cartão (UX-39). */
+[data-destaque="sim"] {
+  outline: 3px solid var(--destaque);
+  outline-offset: 2px;
+}
+
+/* Número que mudou entra de baixo (subiu) ou de cima (desceu) (UX-40). */
+@keyframes entrar-de-baixo {
+  from {
+    transform: translateY(0.35em);
+    opacity: 0.2;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+@keyframes entrar-de-cima {
+  from {
+    transform: translateY(-0.35em);
+    opacity: 0.2;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+[data-anim="subiu"] {
+  animation: entrar-de-baixo 280ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+[data-anim="desceu"] {
+  animation: entrar-de-cima 280ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+/* Número pulsa de leve quando muda. */
 @keyframes pulso {
   0% {
     transform: scale(1);
@@ -83,8 +135,89 @@ body {
 .pulso {
   animation: pulso 400ms ease-out;
 }
+
+/* Cartão ou coluna que trocou de situação com a tela aberta. */
+@keyframes troca-situacao {
+  from {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--cor-estado) 45%, transparent);
+  }
+  to {
+    box-shadow: 0 0 0 10px color-mix(in srgb, var(--cor-estado) 0%, transparent);
+  }
+}
+.troca-situacao {
+  animation: troca-situacao 700ms ease-out;
+}
+
+/* Célula da grade que mudou. */
+@keyframes vaga-mudou {
+  from {
+    outline: 2px solid var(--texto);
+  }
+  to {
+    outline: 2px solid transparent;
+  }
+}
+.vaga-mudou {
+  animation: vaga-mudou 1200ms ease-out;
+}
+
+/* Anel no ponto do indicador a cada dado novo. */
+@keyframes ping-unico {
+  from {
+    transform: scale(1);
+    opacity: 0.6;
+  }
+  to {
+    transform: scale(2.2);
+    opacity: 0;
+  }
+}
+.ping-unico {
+  animation: ping-unico 600ms ease-out 1;
+}
+
+/* Quem pediu menos movimento não vê animação nem transição. */
 @media (prefers-reduced-motion: reduce) {
-  .pulso {
-    animation: none;
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Modo de contraste alto do Windows (UX-43): a cor some, a forma fica. */
+@media (forced-colors: active) {
+  [data-vaga="livre"] {
+    forced-color-adjust: none;
+    background: CanvasText;
+  }
+  [data-vaga="ocupada"] {
+    border: 1px solid CanvasText;
+  }
+  [data-vaga="ocupada"] svg {
+    forced-color-adjust: none;
+    color: CanvasText;
+  }
+  [data-tipo] {
+    outline: 2px solid Highlight;
+    outline-offset: 1px;
+  }
+  [data-indicado="sim"] {
+    outline: 4px double CanvasText;
+    outline-offset: 4px;
+  }
+  [data-parte="livre"] {
+    forced-color-adjust: none;
+    background: CanvasText;
+  }
+  [data-testid="status-conexao"] > span {
+    forced-color-adjust: none;
+    background: CanvasText;
+  }
+  [data-grade-vazia="sim"] {
+    background-image: none;
   }
 }

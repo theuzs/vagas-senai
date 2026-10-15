@@ -98,7 +98,7 @@ describe("db:aplicar", () => {
 
     const primeira = await aplicarMigracoes(sql, lista);
     expect(primeira.aplicadas).toEqual(lista.map((m) => m.nome));
-    const [n] = await sql<{ n: number }[]>`select count(*)::int as n from vagas.bolsoes`;
+    const [n] = await sql<{ n: number }[]>`select count(*)::int as n from vagas.bolsoes where publico`;
     expect(n.n).toBe(3);
 
     const segunda = await aplicarMigracoes(sql, lista);

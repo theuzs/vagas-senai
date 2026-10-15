@@ -1,9 +1,7 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import { z } from "zod";
+import * as z from "zod/mini";
 import type { ConfiguracaoSupabase } from "./configuracao";
-import { EsquemaBolsao, type Carga, type FonteVagas } from "./tipos";
-
-const COLUNAS = "id,nome,ordem,total_vagas,vagas_livres,vagas,especiais,atualizado_em";
+import { COLUNAS, EsquemaBolsao, type Bolsao, type Carga, type FonteVagas } from "./tipos";
 
 // Um cliente por URL: o React em modo estrito monta o painel duas vezes em desenvolvimento.
 const clientes = new Map<string, SupabaseClient<any, "vagas">>(); // eslint-disable-line @typescript-eslint/no-explicit-any
@@ -20,9 +18,13 @@ function cliente(config: ConfiguracaoSupabase) {
   return c;
 }
 
-/** Lê vagas.bolsoes pela API pública e assina as mudanças pelo Realtime. Só a chave anon. */
-export function fonteSupabase(config: ConfiguracaoSupabase): FonteVagas {
+/**
+ * Lê vagas.bolsoes pela API pública e assina as mudanças pelo Realtime. Só a chave anon.
+ * Com `maquete`, lê só os bolsões fora da página pública (UX-59).
+ */
+export function fonteSupabase(config: ConfiguracaoSupabase, opcoes: { maquete?: boolean } = {}): FonteVagas {
   const supabase = cliente(config);
+  const publico = !opcoes.maquete;
 
   async function medirRelogio(): Promise<Carga["relogio"]> {
     const t0 = Date.now();
@@ -35,17 +37,18 @@ export function fonteSupabase(config: ConfiguracaoSupabase): FonteVagas {
   }
 
   async function carregar(): Promise<Carga> {
-    const [resposta, relogio] = await Promise.all([supabase.from("bolsoes").select(COLUNAS).order("ordem"), medirRelogio()]);
+    const [resposta, relogio] = await Promise.all([supabase.from("bolsoes").select(COLUNAS).eq("publico", publico).order("ordem"), medirRelogio()]);
     if (resposta.error) throw resposta.error;
     return { bolsoes: z.array(EsquemaBolsao).parse(resposta.data), relogio };
   }
 
-  function assinar(aoMudar: (b: z.infer<typeof EsquemaBolsao>) => void, aoStatus: (s: "ao-vivo" | "reconectando") => void) {
+  function assinar(aoMudar: (b: Bolsao) => void, aoStatus: (s: "ao-vivo" | "reconectando") => void) {
     const canal = supabase
-      .channel("vagas-bolsoes")
+      .channel(publico ? "vagas-bolsoes" : "vagas-maquete")
       .on("postgres_changes", { event: "UPDATE", schema: "vagas", table: "bolsoes" }, (evento) => {
         const linha = EsquemaBolsao.safeParse(evento.new);
-        if (linha.success) aoMudar(linha.data);
+        // Linha de maquete nunca entra na página pública, e vice-versa.
+        if (linha.success && linha.data.publico === publico) aoMudar(linha.data);
       })
       .subscribe((status) => {
         aoStatus(status === "SUBSCRIBED" ? "ao-vivo" : "reconectando");
