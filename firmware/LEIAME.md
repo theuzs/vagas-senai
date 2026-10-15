@@ -95,6 +95,10 @@ Durante um POST o loop pode ficar parado até 15 s (4 s de conexão, 6 s de TLS 
 5. Mande ao João só a pasta da placa dele. Não faça commit de nenhum arquivo com token ou senha.
 6. `MANTER_PAGINA_LOCAL`: 1 mantém a rede `Estacionamento-X` com a página; 0 desliga.
 
+## Maquete
+
+`maquete/maquete.ino` é uma placa só que lê vários bolsões de uma vez, para a maquete de demonstração. A configuração fica na lista `BOLSOES` no topo: para cada bolsão, o id (que existe em `vagas.bolsoes`), o nome, até 8 pinos (com `-1` nas posições vazias) e as vagas de PCD e idoso ("1,2"). Ela publica todos os bolsões numa chamada só, a cada 3 s (`INTERVALO_PUBLICAR_MS`), com um token só, da central `maquete` (`npm run token:gerar -- maquete "Maquete da banca"`). A rede local é `Maquete-Vagas` (senha `vagas1234`) e a página em http://192.168.4.1 mostra cada bolsão com a sua grade. O resto (Wi-Fi, monitor serial, tabela "Se der erro") é igual ao da placa de bolsão.
+
 ### Certificado TLS
 
 No protótipo `tls.setInsecure()` aceita qualquer certificado. Na versão final, troque pela linha comentada logo acima dele (`setCACertBundle`), que valida o Supabase com o pacote de raízes do próprio core.

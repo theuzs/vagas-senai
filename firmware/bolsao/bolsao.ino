@@ -341,7 +341,6 @@ bool temValorDeExemplo() {
 
 // ---------------- Supabase ----------------
 
-// {"p_token":"...","p_bolsoes":{"A":"01001"}}   0 = livre, 1 = ocupada
 // Motivo do reinício em uma palavra, para a tela /placas.
 String reinicioCurto() {
   switch (esp_reset_reason()) {

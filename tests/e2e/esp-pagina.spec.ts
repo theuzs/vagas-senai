@@ -461,3 +461,98 @@ test.describe("página local da placa: vagas especiais", () => {
     await expect(page.locator(".vaga").nth(0)).not.toContainText("(");
   });
 });
+
+// ---------------- maquete: uma placa com vários bolsões ----------------
+
+interface BolsaoMaquete {
+  id: string;
+  nome: string;
+  vagas: boolean[];
+  livres: number;
+  pinos: number[];
+  mudou_ha: number[];
+  trocas_min: number[];
+  especiais: Record<string, number[]>;
+}
+
+function bolsaoMaquete(id: string, vagas: boolean[], extra: Partial<BolsaoMaquete> = {}): BolsaoMaquete {
+  return {
+    id,
+    nome: `Bloco ${id}`,
+    vagas,
+    livres: vagas.filter((v) => !v).length,
+    pinos: vagas.map((_, i) => 30 + i),
+    mudou_ha: vagas.map(() => -1),
+    trocas_min: vagas.map(() => 0),
+    especiais: {},
+    ...extra,
+  };
+}
+
+function statusMaquete(bolsoes: BolsaoMaquete[], extra: Record<string, unknown> = {}) {
+  const { vagas: _v, pinos: _p, mudou_ha: _m, trocas_min: _t, especiais: _e, bolsao: _b, nome: _n, ...comum } = status();
+  void [_v, _p, _m, _t, _e, _b, _n];
+  return { ...comum, bolsoes, livres: bolsoes.reduce((s, b) => s + b.livres, 0), intervalo_s: 3, ...extra };
+}
+
+test.describe("página local da maquete", () => {
+  const HTML_MAQUETE = () => htmlDaPlaca(join("firmware", "maquete", "maquete.ino"));
+  const tres = () => [bolsaoMaquete("A", [false, true, false], { especiais: { pcd: [0] } }), bolsaoMaquete("C", [true, true, true]), bolsaoMaquete("H", [false, false, false], { especiais: { idoso: [0] } })];
+
+  test("antes da primeira resposta mostra SEM DADOS, sem bolsão nem dígito", async ({ page }) => {
+    const { contagem } = await abrirPagina(page, pendurar, HTML_MAQUETE());
+    await esperarSemDados(page);
+    await expect(page.locator(".bolsao")).toHaveCount(0);
+    await expect(page).toHaveTitle("Placa da maquete");
+    expect(contagem.foraDaPlaca).toBe(0);
+  });
+
+  test("mostra cada bolsão com o seu resumo e a sua grade, e volta para SEM DADOS depois de 21 s", async ({ page }) => {
+    const { trocarResposta, contagem } = await abrirPagina(page, responderCom(statusMaquete(tres()) as unknown as StatusPlaca), HTML_MAQUETE());
+    await expect(page.locator(".bolsao")).toHaveCount(3);
+    await expect(page.locator("#resumo")).toBeHidden();
+    const a = page.locator(".bolsao[data-id=A]");
+    await expect(a.locator("h2")).toHaveText("Bloco A");
+    await expect(a.locator(".numero")).toHaveText("2");
+    await expect(a.locator(".vaga")).toHaveCount(3);
+    await expect(a.locator(".vaga").nth(0)).toContainText("Vaga 1 (PCD)");
+    await expect(a.locator(".vaga").nth(1)).toHaveClass(/ocupada/);
+    const c = page.locator(".bolsao[data-id=C]");
+    await expect(c.locator(".numero")).toHaveText("LOTADO");
+    await expect(c.locator(".rotulo")).toHaveText("0 de 3 livres");
+    await expect(c.locator(".resumo")).toHaveClass(/lotado/);
+    const h = page.locator(".bolsao[data-id=H]");
+    await expect(h.locator(".numero")).toHaveText("3");
+    await expect(h.locator(".vaga").nth(0)).toContainText("Vaga 1 (Idoso)");
+    await expect(page.locator("#faixa-texto")).toHaveText("A placa está enviando para o site. O último envio foi há 3 s.");
+    await expect(page.locator("#detalhes")).toContainText("Envio: a cada 3 s");
+    expect(HTML_MAQUETE()).not.toMatch(/\p{Extended_Pictographic}/u);
+
+    trocarResposta(abortar);
+    await page.clock.runFor(21000);
+    await esperarSemDados(page);
+    await expect(page.locator(".bolsao")).toHaveCount(0);
+    expect(contagem.foraDaPlaca).toBe(0);
+  });
+
+  test("faixa fora de ok cita os três blocos e a vaga instável diz o bolsão", async ({ page }) => {
+    const bolsoes = tres();
+    bolsoes[2].trocas_min = [0, 15, 0];
+    await abrirPagina(page, responderCom(statusMaquete(bolsoes, { envio: "token" }) as unknown as StatusPlaca), HTML_MAQUETE());
+    await expect(page.locator("#faixa-texto")).toHaveText("O site recusou o token desta placa (403). Avise o Matheus.");
+    await expect(page.locator("#faixa-extra")).toHaveText("Enquanto isso, o site mostra SEM DADOS para Bloco A, Bloco C, Bloco H.");
+    await expect(page.locator("#faixa-vaga")).toHaveText("A vaga 2 do Bloco H (GPIO 31) trocou 15 vezes neste minuto. Confira o fio e o alinhamento do sensor.");
+    await expect(page.locator(".bolsao[data-id=H] .vaga.instavel")).toHaveCount(1);
+  });
+
+  test("statusJson da maquete não cita senha, token, chave nem o MAC do softAP", () => {
+    const ino = readFileSync(join(process.cwd(), "firmware", "maquete", "maquete.ino"), "utf8");
+    const ini = ino.indexOf("void statusJson()");
+    const fim = ino.indexOf("\n}\n", ini);
+    expect(ini).toBeGreaterThan(0);
+    const corpo = ino.slice(ini, fim);
+    for (const proibido of ["TOKEN_CENTRAL", "WIFI_SENHA", "SUPABASE_ANON_KEY", "softAPmacAddress", "AP_SENHA"]) {
+      expect(corpo, proibido).not.toContain(proibido);
+    }
+  });
+});
