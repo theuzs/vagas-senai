@@ -1,6 +1,6 @@
 # Plano da noite
 
-Você vai trabalhar sozinho até de manhã. O Matheus confirma as decisões no dia seguinte. Leia antes `CLAUDE.md`, `docs/PROBLEMA.md`, `docs/ESPECIFICACAO.md` e `docs/DECISOES.md`.
+Você vai trabalhar sozinho até de manhã. O João confirma as decisões no dia seguinte. Leia antes `CLAUDE.md`, `docs/PROBLEMA.md`, `docs/ESPECIFICACAO.md` e `docs/DECISOES.md`.
 
 ## Regras da noite
 
@@ -8,7 +8,7 @@ Você vai trabalhar sozinho até de manhã. O Matheus confirma as decisões no d
 - Faça um commit ao fim de cada etapa, com mensagem curta em português e a linha `Co-Authored-By` que o Claude Code indicar. Se o remoto `origin` existir, dê push em `main`, porque o repositório é privado.
 - Se uma etapa travar por muito tempo, registre o motivo no relatório e passe para a próxima.
 - Você pode instalar pacotes npm e também o `arduino-cli`, o core `esp32:esp32` e a biblioteca de LCD I2C, só para compilar o firmware. Para o `arduino-cli`, prefira baixar o zip do Windows 64 bits da página de releases do projeto no GitHub e extrair em `%LOCALAPPDATA%\arduino-cli`. Esse caminho não pede administrador. Não use nada que abra janela de permissão do Windows, porque ninguém vai estar acordado para clicar.
-- Se não houver remoto (`git remote -v` vazio), não crie nenhum: faça só commits locais e o Matheus liga o remoto de manhã.
+- Se não houver remoto (`git remote -v` vazio), não crie nenhum: faça só commits locais e o João liga o remoto de manhã.
 - Não faça:
   - conexão com o Supabase de produção (não existe `.env` com chave real, e isso é de propósito);
   - deploy na Vercel ou mudança de DNS;
@@ -103,4 +103,4 @@ Escreva `docs/RELATORIO-NOITE.md` e faça o último commit:
 - o que ficou pronto, etapa por etapa, com a saída resumida de `npm run check`, `npm run test:e2e` e da compilação do firmware;
 - o que não ficou pronto e por quê;
 - decisões tomadas durante a noite;
-- o que o Matheus precisa fazer de manhã, em passos curtos.
+- o que o João precisa fazer de manhã, em passos curtos.

@@ -217,14 +217,14 @@ test.describe("página local da placa: diagnóstico", () => {
     { envio: "sem_wifi", extra: { wifi: false, sinal: 0, ip: "", motivo_wifi: "a rede recusou a senha" }, texto: "A placa está sem o Wi-Fi do campus. Motivo: a rede recusou a senha. Ela tenta de novo sozinha." },
     { envio: "aguardando", texto: "A placa entrou no Wi-Fi. O próximo envio sai em até 10 s." },
     { envio: "ok", extra: { ultimo_ok_s: 4 }, texto: "A placa está enviando para o site. O último envio foi há 4 s." },
-    { envio: "chave", texto: "O site recusou a chave do Supabase (401). Peça ao Matheus um arquivo novo." },
-    { envio: "token", texto: "O site recusou o token desta placa (403). Avise o Matheus." },
+    { envio: "chave", texto: "O site recusou a chave do Supabase (401). Confira a chave no painel do Supabase (Project Settings > API Keys)." },
+    { envio: "token", texto: "O site recusou o token desta placa (403). Gere outro com npm run token:gerar." },
     { envio: "dados", texto: "O banco recusou os dados (400). Confira ID_BOLSAO no arquivo." },
-    { envio: "funcao", texto: "O site não achou a função de envio (404). Avise o Matheus." },
-    { envio: "schema", texto: "O site não liberou o schema vagas (406). Avise o Matheus." },
+    { envio: "funcao", texto: "O site não achou a função de envio (404). Rode as migrations com npm run db:aplicar." },
+    { envio: "schema", texto: "O site não liberou o schema vagas (406). Libere o schema vagas na API do Supabase." },
     { envio: "portal", texto: "A rede pediu login no navegador. Peça à TI para liberar o MAC 24:6F:28:AA:BB:CC." },
     { envio: "sem_internet", texto: "A placa tem Wi-Fi, mas o site não respondeu. Confira se a rede libera a internet." },
-    { envio: "outro", extra: { ultimo_ok_s: 95 }, texto: "O último envio certo foi há 95 s. Avise o Matheus." },
+    { envio: "outro", extra: { ultimo_ok_s: 95 }, texto: "O último envio certo foi há 95 s. Confira o monitor serial." },
   ];
   for (const caso of casos) {
     test(`faixa com envio "${caso.envio}"${caso.extra?.config ? " e erro de pino" : ""}`, async ({ page }) => {
@@ -539,7 +539,7 @@ test.describe("página local da maquete", () => {
     const bolsoes = tres();
     bolsoes[2].trocas_min = [0, 15, 0];
     await abrirPagina(page, responderCom(statusMaquete(bolsoes, { envio: "token" }) as unknown as StatusPlaca), HTML_MAQUETE());
-    await expect(page.locator("#faixa-texto")).toHaveText("O site recusou o token desta placa (403). Avise o Matheus.");
+    await expect(page.locator("#faixa-texto")).toHaveText("O site recusou o token desta placa (403). Gere outro com npm run token:gerar.");
     await expect(page.locator("#faixa-extra")).toHaveText("Enquanto isso, o site mostra SEM DADOS para Bloco A, Bloco C, Bloco H.");
     await expect(page.locator("#faixa-vaga")).toHaveText("A vaga 2 do Bloco H (GPIO 31) trocou 15 vezes neste minuto. Confira o fio e o alinhamento do sensor.");
     await expect(page.locator(".bolsao[data-id=H] .vaga.instavel")).toHaveCount(1);

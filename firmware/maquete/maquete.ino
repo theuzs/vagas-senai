@@ -488,19 +488,19 @@ void publicar() {
     Serial.print("). Isso acontece quando ela pede login no navegador. Peça à TI para liberar o MAC "); Serial.print(WiFi.macAddress()); Serial.println(".");
   } else if (codigo == 401) {
     situacaoEnvio = ENVIO_CHAVE;
-    Serial.println("[http] chave recusada (401). A SUPABASE_ANON_KEY deste arquivo está errada. Peça ao Matheus um arquivo novo.");
+    Serial.println("[http] chave recusada (401). A SUPABASE_ANON_KEY deste arquivo está errada. Confira a chave no painel do Supabase (Project Settings > API Keys).");
   } else if (codigo == 403) {
     situacaoEnvio = ENVIO_TOKEN;
-    Serial.println("[http] token recusado (403). Avise o Matheus: o token deste arquivo foi trocado ou desligado.");
+    Serial.println("[http] token recusado (403). O token deste arquivo foi trocado ou desligado. Gere outro com npm run token:gerar.");
   } else if (codigo == 400) {
     situacaoEnvio = ENVIO_DADOS;
     Serial.print("[http] dados recusados (400): "); Serial.println(corpo);
   } else if (codigo == 404) {
     situacaoEnvio = ENVIO_FUNCAO;
-    Serial.println("[http] o Supabase não achou a função publicar (404). Avise o Matheus.");
+    Serial.println("[http] o Supabase não achou a função publicar (404). Rode as migrations com npm run db:aplicar.");
   } else if (codigo == 406) {
     situacaoEnvio = ENVIO_SCHEMA;
-    Serial.println("[http] o schema vagas não está liberado na API (406). Avise o Matheus.");
+    Serial.println("[http] o schema vagas não está liberado na API (406). Libere o schema vagas em Data API > Exposed schemas.");
   } else if (codigo < 0) {
     situacaoEnvio = ENVIO_SEM_INTERNET;
     Serial.print("[http] sem resposta do Supabase ("); Serial.print(textoErroRede(codigo)); Serial.println("). Confira se a rede tem internet.");
@@ -657,14 +657,14 @@ const char PAGINA[] PROGMEM = R"rawliteral(
       case 'sem_wifi': return 'A placa está sem o Wi-Fi do campus. Motivo: ' + (d.motivo_wifi || 'ainda procurando a rede') + '. Ela tenta de novo sozinha.';
       case 'aguardando': return 'A placa entrou no Wi-Fi. O próximo envio sai em até ' + d.intervalo_s + ' s.';
       case 'ok': return 'A placa está enviando para o site. O último envio foi há ' + d.ultimo_ok_s + ' s.';
-      case 'chave': return 'O site recusou a chave do Supabase (401). Peça ao Matheus um arquivo novo.';
-      case 'token': return 'O site recusou o token desta placa (403). Avise o Matheus.';
+      case 'chave': return 'O site recusou a chave do Supabase (401). Confira a chave no painel do Supabase (Project Settings > API Keys).';
+      case 'token': return 'O site recusou o token desta placa (403). Gere outro com npm run token:gerar.';
       case 'dados': return 'O banco recusou os dados (400). Confira os ids em BOLSOES no arquivo.';
-      case 'funcao': return 'O site não achou a função de envio (404). Avise o Matheus.';
-      case 'schema': return 'O site não liberou o schema vagas (406). Avise o Matheus.';
+      case 'funcao': return 'O site não achou a função de envio (404). Rode as migrations com npm run db:aplicar.';
+      case 'schema': return 'O site não liberou o schema vagas (406). Libere o schema vagas na API do Supabase.';
       case 'portal': return 'A rede pediu login no navegador. Peça à TI para liberar o MAC ' + d.mac + '.';
       case 'sem_internet': return 'A placa tem Wi-Fi, mas o site não respondeu. Confira se a rede libera a internet.';
-      default: return 'O último envio certo foi há ' + (d.ultimo_ok_s >= 0 ? d.ultimo_ok_s + ' s' : 'mais de um dia') + '. Avise o Matheus.';
+      default: return 'O último envio certo foi há ' + (d.ultimo_ok_s >= 0 ? d.ultimo_ok_s + ' s' : 'mais de um dia') + '. Confira o monitor serial.';
     }
   }
 

@@ -114,7 +114,7 @@ Por que assim: a chave `anon` fica dentro da página, então qualquer pessoa pod
 
 ### 2.5 Configuração manual no Supabase
 
-Em Project Settings → Data API → Exposed schemas, acrescentar `vagas`. Isso só adiciona o schema à API e não muda nada do WebSiteFoods. Quem faz é o Matheus, no deploy.
+Em Project Settings → Data API → Exposed schemas, acrescentar `vagas`. Isso só adiciona o schema à API e não muda nada do WebSiteFoods. Quem faz é o João, no deploy.
 
 ## 3. Página
 
@@ -155,7 +155,7 @@ Visual:
 - Tema escuro por padrão, porque o uso é à noite. Contraste AA.
 - Verde para livre, amarelo para poucas, vermelho para LOTADO. SEM DADOS precisa se distinguir de LOTADO sem depender de cor: texto, ícone de alerta e listras.
 - Alvos de toque de pelo menos 44 px, foco visível, `prefers-reduced-motion` respeitado.
-- O Matheus gosta de movimento: uma animação curta quando o número muda cai bem.
+- O João gosta de movimento: uma animação curta quando o número muda cai bem.
 - Sem logo do SENAI. O nome na tela é texto: "Vagas SENAI Blumenau".
 
 ### 3.4 PWA
@@ -217,7 +217,7 @@ Documentar em `firmware/LEIAME.md` como a mesma lógica de publicação rodaria 
 - `scripts/gerar-token.ts` (`npm run token:gerar -- central-1 "Central da guarita"`): gera 32 bytes aleatórios em base64url, mostra o token para colar no `config.h` e o SQL `insert into vagas.centrais (...) values (..., decode('<sha256 hex>', 'hex'))`. O hash é calculado no script, para o token não passar pelo SQL Editor.
 - `scripts/simular-ponte.ts` (`npm run simular:ponte`): faz o papel da ponte com `SUPABASE_URL`, `SUPABASE_ANON_KEY` e `TOKEN_CENTRAL` do ambiente. Publica estados aleatórios a cada 10 s. `--parar H` deixa o H de fora para testar SEM DADOS, e `--seco` só mostra o payload.
 
-## 6. Deploy (com o Matheus)
+## 6. Deploy (com o João)
 
 1. Expor o schema `vagas` (2.5).
 2. `DATABASE_URL=... npm run db:aplicar` (ou colar as migrations no SQL Editor).

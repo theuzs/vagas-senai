@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-Monitor das vagas de estacionamento dos bolsões A, C e H do SENAI Blumenau no período noturno. O projeto é do João, primo do Matheus, e concorre a um prêmio do SENAI com prazo em novembro de 2026.
+Monitor das vagas de estacionamento dos bolsões A, C e H do SENAI Blumenau no período noturno. O projeto é do João Victor Fagundes Miranda, aluno do SENAI Itumbiara, e concorre a um prêmio do SENAI com prazo em novembro de 2026.
 
 - Problema original e mapa do campus: `docs/PROBLEMA.md`
 - O que construir: `docs/ESPECIFICACAO.md`

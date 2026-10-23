@@ -6,7 +6,7 @@ ESP32 do bolsão (sensores + Wi-Fi do campus) ──HTTPS a cada 10 s──► S
 ```
 
 - `bolsao/bolsao.ino`: o código de cada ESP32. Leitura dos sensores (igual ao código original do João), página local e envio para o Supabase. Este arquivo não tem segredo.
-- `bolsao/placas/bolsao_A/bolsao_A.ino`, `bolsao_C` e `bolsao_H`: o arquivo pronto de cada placa, com o Supabase e o token preenchidos. A pasta `placas/` é ignorada pelo git. O Matheus gera esses arquivos com `npm run firmware:placas` (veja "Para o Matheus").
+- `bolsao/placas/bolsao_A/bolsao_A.ino`, `bolsao_C` e `bolsao_H`: o arquivo pronto de cada placa, com o Supabase e o token preenchidos. A pasta `placas/` é ignorada pelo git. Eles são gerados com `npm run firmware:placas` (veja "Tokens e arquivos das placas").
 - `maquete/maquete.ino`: uma placa só que lê vários bolsões, para a maquete de demonstração.
 - `central/` e `ponte/`: variante para o caso de os nós voltarem a mandar por ESP-NOW para uma central. Não é preciso para o caminho atual.
 
@@ -65,11 +65,11 @@ Dá para ligar no máximo 19 sensores numa placa. Um pino da lista "nunca" ou re
 | `[wifi] não conectou: a rede X é aberta ou usa segurança antiga. Se ela não pede senha, deixe WIFI_SENHA = "".` | O arquivo tem senha e a rede não pede. |
 | `[wifi] sinal muito fraco (-84 dBm).` | Aproxime a placa do roteador ou use antena externa. |
 | `[http] a rede respondeu no lugar do Supabase (200).` | A rede pede login no navegador (portal cativo). Peça à TI para liberar o MAC que aparece na linha `[wifi] MAC`. |
-| `[http] chave recusada (401).` | A `SUPABASE_ANON_KEY` do arquivo está errada. Peça ao Matheus um arquivo novo. |
-| `[http] token recusado (403).` | O token deste arquivo foi trocado ou desligado. Avise o Matheus. |
+| `[http] chave recusada (401).` | A `SUPABASE_ANON_KEY` do arquivo está errada. Confira a chave em Project Settings > API Keys do Supabase. |
+| `[http] token recusado (403).` | O token deste arquivo foi trocado ou desligado. Gere outro com `npm run token:gerar`. |
 | `[http] dados recusados (400): ...` | O banco recusou o envio. Quase sempre `ID_BOLSAO` que não existe na tabela. |
-| `[http] o Supabase não achou a função publicar (404).` | A migration não rodou no banco. Avise o Matheus. |
-| `[http] o schema vagas não está liberado na API (406).` | O schema `vagas` não está exposto na API do Supabase. Avise o Matheus. |
+| `[http] o Supabase não achou a função publicar (404).` | A migration não rodou no banco. Rode `npm run db:aplicar`. |
+| `[http] o schema vagas não está liberado na API (406).` | O schema `vagas` não está exposto na API do Supabase. Libere em Data API > Exposed schemas. |
 | `[http] sem resposta do Supabase (não conectou).` | A rede tem Wi-Fi mas não libera a internet, ou o Supabase está fora. A placa tenta de novo em 10 s. |
 | `[wifi] sem conexão há N s, tentando de novo` | A placa refaz a conexão com espera crescente (30 s, 1, 2, 4, 5 min). |
 
@@ -86,7 +86,7 @@ A página local mostra as mesmas situações em texto, na faixa abaixo do títul
 
 Durante um POST o loop pode ficar parado até 15 s (4 s de conexão, 6 s de TLS e 5 s de resposta). A leitura dos sensores pausa nesse tempo; com o filtro de 3 leituras, nenhum estado muda por causa disso.
 
-## Para o Matheus
+## Tokens e arquivos das placas
 
 1. Tokens, um por bolsão: `npm run token:gerar -- bolsao-a "Bolsão A"` (e `bolsao-c`, `bolsao-h`). Rode o SQL de cada um no Supabase e guarde os tokens no `.env.local` como `TOKEN_BOLSAO_A`, `TOKEN_BOLSAO_C` e `TOKEN_BOLSAO_H`.
 2. No `.env.local`, confira `NEXT_PUBLIC_SUPABASE_URL` e `NEXT_PUBLIC_SUPABASE_ANON_KEY`.

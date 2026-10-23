@@ -27,7 +27,7 @@ Para o João:
 - O Wi-Fi do campus pede só senha, usuário e senha, ou uma página de login no navegador? No último caso, a TI precisa liberar a ponte pelo MAC.
 - O sinal do nó do H chega até onde a central vai ficar? Pelo mapa são uns 100 m com prédios no meio.
 
-Para o Matheus:
+Para o João:
 - Reservar o subdomínio `vagas` no WebSiteFoods, para ninguém criar uma loja com esse nome? É opcional.
 
 ## Decididas durante a noite (07 para 08/10/2026)
@@ -49,14 +49,14 @@ Para o Matheus:
 
 ## Confirmadas em 08/10/2026
 
-O Matheus confirmou as 29 e acrescentou:
+O João confirmou as 29 e acrescentou:
 
 30. **Um ESP32 por bolsão fala direto com o Supabase, em um arquivo só.** O código real dos nós (`bolsao.ino` original do João) lê os sensores e serve uma página no softAP; não há ESP-NOW nem central. Então a decisão 3 (duas placas) deixa de ser necessária: `firmware/bolsao/bolsao.ino` junta a leitura original, a página local (opcional) e o envio pelo Wi-Fi do campus. As pastas `firmware/central` e `firmware/ponte` ficam como variante, caso os nós voltem a usar ESP-NOW. Um token por bolsão (`bolsao-a`, `bolsao-c`, `bolsao-h`).
 31. **Tela da guarita em `/guarita`, no lugar do `?painel=1`.** O PC da guarita é paisagem; a tela tem três colunas, relógio e a orientação para o vigia ("Mais vagas agora: Bloco H, 12 livres."). Com algum bolsão sem dado, a faixa avisa para conferir no local e nunca diz que está tudo lotado. A lógica de dados saiu do painel do celular para `useVagas`, usada pelas duas telas.
 
 ## Decididas em 14/10/2026
 
-32. **Supabase próprio do SENAI.** O Matheus criou um projeto só para este sistema (`hsfsejmhltkxiwniuunf`, região sa-east-1), no lugar do Supabase do WebSiteFoods. Isso substitui a decisão 1. O domínio e a conta Vercel continuam os do WebSiteFoods. O código continua usando o schema `vagas` e o `npm run db:aplicar`, porque a página, os testes e o firmware dependem desse schema. O banco só aceita conexão direta por IPv6, então o `DATABASE_URL` usa o pooler `aws-1-sa-east-1.pooler.supabase.com`, porta 5432.
+32. **Supabase próprio do SENAI.** O João criou um projeto só para este sistema (`hsfsejmhltkxiwniuunf`, região sa-east-1), no lugar do Supabase do WebSiteFoods. Isso substitui a decisão 1. O domínio e a conta Vercel continuam os do WebSiteFoods. O código continua usando o schema `vagas` e o `npm run db:aplicar`, porque a página, os testes e o firmware dependem desse schema. O banco só aceita conexão direta por IPv6, então o `DATABASE_URL` usa o pooler `aws-1-sa-east-1.pooler.supabase.com`, porta 5432.
 33. **`npm run db:aplicar` lê o `.env.local`.** Assim basta ter o `DATABASE_URL` nesse arquivo, sem colar a URL no terminal.
 34. **`vagas.migracoes` com RLS ligado.** A tabela não tem grant para `anon`, mas o schema `vagas` é exposto na API e o painel do Supabase acusaria a tabela como aberta. O script liga o RLS toda vez que roda.
 35. **Arquivo pronto para cada placa.** `firmware/bolsao/placas/bolsao_A`, `bolsao_C` e `bolsao_H` (pasta ignorada pelo git) já têm URL, chave publishable, token do bolsão e nome da rede local (`Estacionamento-A`, `-C`, `-H`). O João só confere `N_VAGAS` e `PINO_VAGA` e preenche o Wi-Fi do campus. O `bolsao.ino` do repositório continua sem segredo.
@@ -85,7 +85,7 @@ As decisões D1 a D22 de `docs/MELHORIAS-UX.md` valem como tomadas e foram aplic
 53. **Tela de resultados `/resultados`** (D21, fora do escopo original), com as funções `vagas.resumo_noites`, `vagas.impacto` e `vagas.serie_noite` (`security definer`, só agregados; `anon` continua sem ler `historico`; a maquete fica de fora). "Janelas avaliadas" são as com foto de pelo menos dois bolsões; a média "dos outros blocos" é a dos bolsões com foto e com vaga nessas janelas. Um gráfico SVG por bloco; CSV com `;` e hora local.
 54. **Telas de erro e 404 em português** (D22): `error.tsx`, `guarita/error.tsx`, `global-error.tsx` e `not-found.tsx` com o visual do SEM DADOS, sem número guardado. A guarita tenta de novo a cada 30 s e, na terceira tentativa, só recarrega se um `HEAD` no próprio endereço responder. O contador fica em `sessionStorage["vagas-erro-tentativas"]` e `useVagas` o zera na primeira carga boa.
 55. **Folha do QR** (UX-18): QR de 165 mm, nível H, modo alfanumérico; título "Vagas livres agora / nos blocos A, C e H" e "Com o carro parado, aponte a câmera do celular." (desvio do texto da especificação 3.5). As três folhas (`/qr`, `/qr/sala`, `/guarita/guia`) usam `src/components/folha.tsx`. A folha já impressa precisa ser impressa de novo.
-56. **Página `/como-funciona`** com o problema, o caminho do dado, a regra do SEM DADOS, a maquete, os créditos ("Sensores e placas: João Victor Fagundes Miranda, aluno de Desenvolvimento de Sistemas do SENAI Itumbiara. Site e banco de dados: Matheus Fagundes.") e o painel com um cartão por tela. É a porta de entrada para todas as telas; o rodapé de `/` leva até ela, até `/resultados`, `/guarita` e `/qr`, e tem o botão "Enviar o link".
+56. **Página `/como-funciona`** com o problema, o caminho do dado, a regra do SEM DADOS, a maquete, os créditos ("Sensores, placas, site e banco de dados: João Victor Fagundes Miranda, aluno de Desenvolvimento de Sistemas do SENAI Itumbiara.") e o painel com um cartão por tela. É a porta de entrada para todas as telas; o rodapé de `/` leva até ela, até `/resultados`, `/guarita` e `/qr`, e tem o botão "Enviar o link".
 57. **Guarita no PC:** o atalho abre `/guarita?quiosque=1` (some o botão de tela cheia); `&som=1` liga os avisos falados (UX-63) e exige caixa de som e a flag `--autoplay-policy=no-user-gesture-required`. A tela recarrega sozinha uma vez por dia às 17:30 se estiver aberta há mais de 1 h e o servidor responder, e mostra a versão (7 caracteres do commit) no canto (UX-46). O guia impresso do vigia fica em `/guarita/guia`.
 58. **Acessos contados pelo Web Analytics da Vercel** (UX-60), sem cookies, com a guarita, a demonstração e a maquete filtradas. Precisa ligar o Web Analytics no projeto `vagas-senai` na Vercel; sem isso o script responde 404 e nada quebra.
 59. **Leitor de tela:** sem `aria-live` nas listas; um anunciador fala só quando a situação de um bloco muda ou a conexão cai e volta (D19). Alvos de toque de 44 px, zoom livre, modo de contraste alto do Windows coberto (UX-43).

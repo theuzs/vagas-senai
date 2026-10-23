@@ -59,7 +59,7 @@ test.describe('página "Como funciona" (UX-56)', () => {
     await expect(page.getByRole("link", { name: /^QR para salas/ })).toHaveAttribute("href", "/qr/sala");
     expect(await page.locator("[data-testid^=cartao-], [data-testid^=guarita-]").count()).toBe(0);
     await expect(page.locator("img[alt*='dados simulados']")).toBeVisible();
-    await expect(page.locator("main")).toContainText("Sensores e placas: João Victor Fagundes Miranda");
+    await expect(page.locator("main")).toContainText("Sensores, placas, site e banco de dados: João Victor Fagundes Miranda");
     await expect(page.locator("main")).toContainText("A maquete");
     await expect(page.locator("main")).not.toContainText(/bols[ãa]o/i);
 
