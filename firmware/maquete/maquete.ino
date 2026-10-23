@@ -59,7 +59,7 @@ const char* AP_SENHA = "vagas1234";       // mínimo 8 caracteres
 // ===================================================================
 
 // Data da última mudança deste arquivo. Aparece no monitor serial e na página local.
-const char* VERSAO_FIRMWARE = "2026-10-15";
+const char* VERSAO_FIRMWARE = "2026-10-22";
 
 const int N_BOLSOES = sizeof(BOLSOES) / sizeof(BOLSOES[0]);
 
